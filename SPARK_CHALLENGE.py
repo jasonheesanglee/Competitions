@@ -8,16 +8,24 @@
 import os
 import numpy as np
 import pandas as pd
+from matplotlib import rc
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 import scipy as sp
 import folium
 import math
 import itertools
 import glob
 import seaborn as sns
-import matplotlib.font_manager as fm
-plt.rcParams['font.family'] = 'AppleGothic'
+import unicodedata
+
+
+
+rc('font', family='AppleGothic')
+plt.rcParams['axes.unicode_minus'] = False
+
 font_path = fm.findfont('AppleGothic')
+
 if not font_path:
     print('Warning: AppleGothic font not found')
 else:
@@ -25,18 +33,20 @@ else:
 
 font_prop = fm.FontProperties(fname=font_path, size=12)
 
-
-
+# checking current directory
 print(os.getcwd())
+
 dataset = "./dataset/"
 META = dataset + "META/"
 TRAIN_AWS = dataset + "TRAIN_AWS/"
 TRAIN_PM = dataset + "TRAIN/"
 TEST_AWS = dataset + "TEST_AWS/"
 TEST_PM = dataset + "TEST_INPUT/"
+AWS_CITY_VARIABLE = dataset + "ALL_CITY_VARIABLE/AWS_TRAIN_VARIABLE/"
+PM_CITY_VARIABLE = dataset + "ALL_CITY_VARIABLE/PM_TRAIN_VARIABLE/"
+AWS_CITY_YEAR = dataset + "CITY_YEAR/AWS_TRAIN_CITY_YEAR/"
+PM_CITY_YEAR = dataset + "CITY_YEAR/PM_TRAIN_CITY_YEAR/"
 
-
-# checking path of this CURRENT document
 
 map_Kor = folium.Map(location=(36.62, 126.984873), zoom_start = 9, tiles="Stamen Terrain")
 map_Kor.save("Climate_Map.html")
@@ -100,11 +110,11 @@ keys are "train_aws", "train_pm", "test_aws", "test_pm"
 if not os.path.exists(dataset + "CITY_YEAR"):
     os.mkdir(dataset + "CITY_YEAR")
 
-if not os.path.exists(dataset + "CITY_YEAR/AWS_TRAIN_CITY_YEAR"):
-    os.mkdir(dataset + "CITY_YEAR/AWS_TRAIN_CITY_YEAR")
+if not os.path.exists(AWS_CITY_YEAR):
+    os.mkdir(AWS_CITY_YEAR)
 
-if not os.path.exists(dataset + "CITY_YEAR/PM_TRAIN_CITY_YEAR"):
-    os.mkdir(dataset + "CITY_YEAR/PM_TRAIN_CITY_YEAR")
+if not os.path.exists(PM_CITY_YEAR):
+    os.mkdir(PM_CITY_YEAR)
 
 # ------------------------------------------------------------------------------------
 
@@ -120,7 +130,7 @@ for train_aws_file in all_file_locations['train_aws']:
     # separate by year and save as separate csv files
     for year in range(4):
         year_df = df[df['연도'] == year]
-        year_filename = dataset + f"CITY_YEAR/AWS_TRAIN_CITY_YEAR/train_aws_{location}_{year}.csv"
+        year_filename = AWS_CITY_YEAR + f"train_aws_{location}_{year}.csv"
         year_df.to_csv(year_filename, index=False)
 
 for train_pm_file in all_file_locations['train_pm']:
@@ -131,7 +141,7 @@ for train_pm_file in all_file_locations['train_pm']:
     # separate by year and save as separate csv files
     for year in range(4):
         year_df = df[df['연도'] == year]
-        year_filename = dataset + f"CITY_YEAR/PM_TRAIN_CITY_YEAR/train_pm_{location}_{year}.csv"
+        year_filename = PM_CITY_YEAR + f"train_pm_{location}_{year}.csv"
         year_df.to_csv(year_filename, index=False)
 
 # ------------------------------------------------------------------------------------
@@ -141,105 +151,14 @@ for train_pm_file in all_file_locations['train_pm']:
 if not os.path.exists(dataset + "ALL_CITY_VARIABLE"):
     os.mkdir(dataset + "ALL_CITY_VARIABLE")
 
-if not os.path.exists(dataset + "ALL_CITY_VARIABLE/AWS_TRAIN_VARIABLE"):
-    os.mkdir(dataset + "ALL_CITY_VARIABLE/AWS_TRAIN_VARIABLE")
+if not os.path.exists(AWS_CITY_VARIABLE):
+    os.mkdir(AWS_CITY_VARIABLE)
 
-if not os.path.exists(dataset + "ALL_CITY_VARIABLE/PM_TRAIN_VARIABLE"):
-    os.mkdir(dataset + "ALL_CITY_VARIABLE/PM_TRAIN_VARIABLE")
-
-# ------------------------------------------------------------------------------------
-# 기온
-# created new dataframe to store same columns per city
-new_list = []
-
-for train_aws_file in all_file_locations['train_aws']:
-    column_name = train_aws_file.split("/")[-1].split(".")[0]
-    df = pd.read_csv(train_aws_file, usecols=[0, 1, 3])
-    new_list.append((column_name, df))
-
-AWS_TRAIN_total = pd.concat([df[1]['기온(°C)'] for df in new_list], axis=1)
-AWS_TRAIN_total.columns = [df[0] for df in new_list]
-print(AWS_TRAIN_total)
-
-AWS_TRAIN_total.insert(loc=0, column='연도', value=new_list[0][1]["연도"])
-AWS_TRAIN_total.insert(loc=1, column='일시', value=new_list[0][1]["일시"])
-
-
-AWS_TRAIN_total.to_csv(dataset + f"ALL_CITY_VARIABLE/AWS_TRAIN_VARIABLE/temperature.csv", index=False)
-# ------------------------------------------------------------------------------------------------------
-new_list = []
-
-for train_aws_file in all_file_locations['train_aws']:
-    column_name = train_aws_file.split("/")[-1].split(".")[0]
-    df = pd.read_csv(train_aws_file, usecols=[0, 1, 4])
-    new_list.append((column_name, df))
-
-AWS_TRAIN_total = pd.concat([df[1]['풍향(deg)'] for df in new_list], axis=1)
-AWS_TRAIN_total.columns = [df[0] for df in new_list]
-print(AWS_TRAIN_total)
-
-AWS_TRAIN_total.insert(loc=0, column='연도', value=new_list[0][1]["연도"])
-AWS_TRAIN_total.insert(loc=1, column='일시', value=new_list[0][1]["일시"])
-
-
-AWS_TRAIN_total.to_csv(dataset + f"ALL_CITY_VARIABLE/AWS_TRAIN_VARIABLE/wind_dir.csv", index=False)
-
-# ------------------------------------------------------------------------------------------------------
-new_list = []
-
-for train_aws_file in all_file_locations['train_aws']:
-    column_name = train_aws_file.split("/")[-1].split(".")[0]
-    df = pd.read_csv(train_aws_file, usecols=[0, 1, 5])
-    new_list.append((column_name, df))
-
-AWS_TRAIN_total = pd.concat([df[1]['풍속(m/s)'] for df in new_list], axis=1)
-AWS_TRAIN_total.columns = [df[0] for df in new_list]
-print(AWS_TRAIN_total)
-
-AWS_TRAIN_total.insert(loc=0, column='연도', value=new_list[0][1]["연도"])
-AWS_TRAIN_total.insert(loc=1, column='일시', value=new_list[0][1]["일시"])
-
-
-AWS_TRAIN_total.to_csv(dataset + f"ALL_CITY_VARIABLE/AWS_TRAIN_VARIABLE/wind_speed.csv", index=False)
-
-
-# ------------------------------------------------------------------------------------------------------
-new_list = []
-
-for train_aws_file in all_file_locations['train_aws']:
-    column_name = train_aws_file.split("/")[-1].split(".")[0]
-    df = pd.read_csv(train_aws_file, usecols=[0, 1, 6])
-    new_list.append((column_name, df))
-
-AWS_TRAIN_total = pd.concat([df[1]['강수량(mm)'] for df in new_list], axis=1)
-AWS_TRAIN_total.columns = [df[0] for df in new_list]
-print(AWS_TRAIN_total)
-
-AWS_TRAIN_total.insert(loc=0, column='연도', value=new_list[0][1]["연도"])
-AWS_TRAIN_total.insert(loc=1, column='일시', value=new_list[0][1]["일시"])
-
-
-AWS_TRAIN_total.to_csv(dataset + f"ALL_CITY_VARIABLE/AWS_TRAIN_VARIABLE/rain_amount.csv", index=False)
-
-# ------------------------------------------------------------------------------------------------------
-new_list = []
-
-for train_aws_file in all_file_locations['train_aws']:
-    column_name = train_aws_file.split("/")[-1].split(".")[0]
-    df = pd.read_csv(train_aws_file, usecols=[0, 1, 7])
-    new_list.append((column_name, df))
-
-AWS_TRAIN_total = pd.concat([df[1]['습도(%)'] for df in new_list], axis=1)
-AWS_TRAIN_total.columns = [df[0] for df in new_list]
-print(AWS_TRAIN_total)
-
-AWS_TRAIN_total.insert(loc=0, column='연도', value=new_list[0][1]["연도"])
-AWS_TRAIN_total.insert(loc=1, column='일시', value=new_list[0][1]["일시"])
-
-
-AWS_TRAIN_total.to_csv(dataset + f"ALL_CITY_VARIABLE/AWS_TRAIN_VARIABLE/humidity.csv", index=False)
+if not os.path.exists(PM_CITY_VARIABLE):
+    os.mkdir(PM_CITY_VARIABLE)
 
 # ------------------------------------------------------------------------------------
+
 new_list = []
 column_names = {
     "기온(°C)": 3,
@@ -263,7 +182,7 @@ for column_name, col_idx in column_names.items():
     AWS_TRAIN_total.insert(loc=0, column='연도', value=temp_list[0][1]["연도"])
     AWS_TRAIN_total.insert(loc=1, column='일시', value=temp_list[0][1]["일시"])
 
-    AWS_TRAIN_total.to_csv(dataset + f"ALL_CITY_VARIABLE/AWS_TRAIN_VARIABLE/{column_name}.csv", index=False)
+    AWS_TRAIN_total.to_csv(AWS_CITY_VARIABLE + f"{column_name}.csv", index=False)
 
 # ------------------------------------------------------------------------------------
 
@@ -285,24 +204,59 @@ PM_TRAIN_total['연도'] = df.iloc[:, 0]
 PM_TRAIN_total['일시'] = df.iloc[:, 1]
 PM_TRAIN_total = PM_TRAIN_total.set_index(["연도", "일시"])
 
-PM_TRAIN_total.to_csv(dataset + f"ALL_CITY_VARIABLE/PM_TRAIN_VARIABLE/PM2_5.csv", index=True)
+PM_TRAIN_total.to_csv(PM_CITY_VARIABLE + "PM2_5.csv", index=True)
 
-# ---------------------------well---------------------------------------------------------
+# ------------------------------------------------------------------------------------
 
 # finding wind-direction correlation between cities.
 # One of the file created from above will be used.
 
-rel_wind_dir = pd.read_csv(dataset + "ALL_CITY_VARIABLE/AWS_TRAIN_VARIABLE/풍향(deg).csv")
+rel_wind_dir = pd.read_csv(AWS_CITY_VARIABLE + "풍향(deg).csv")
+print(rel_wind_dir)
+locs_aws = list(rel_wind_dir.columns)
+new = []
+for i in locs_aws:
+    new.append(unicodedata.normalize('NFC', i))
+rel_wind_dir.columns = new
 
-corr_matrix = rel_wind_dir.corr()
+rel_w_d = rel_wind_dir.iloc[:, 2:]
+print(rel_w_d)
 
-plt.plot(corr_matrix['풍향(deg)'], corr_matrix.index, 'o')
-plt.title('Correlation with Relative Wind Direction', fontproperties=font_prop)
-plt.xlabel('Correlation Coefficient', fontproperties=font_prop)
-plt.ylabel('Variables', fontproperties=font_prop)
+# ------------------------------------------------------------------------------------
 
+# Calculate the correlations between each column
+corr_matrix = rel_w_d.corr()
+
+# Plot a heatmap of the correlation matrix
+sns.heatmap(corr_matrix, annot=True, cmap="coolwarm")
+plt.title("Correlation Matrix of AWS Variables")
 plt.show()
 
+# ------------------------------------------------------------------------------------
+
+# finding locations that has comparatively high correlation values.
+
+upper_tri = np.triu(corr_matrix, k=1)
+
+row, col = np.where(upper_tri > 0.5)
+
+loc_corr_list = []
+
+for i in range(len(row)):
+    loc_a = locs_aws[row[i]+2]
+    loc_b = locs_aws[col[i] + 2]
+    corr = upper_tri[row[i], col[i]]
+    loc_corr_list.append((loc_a, loc_b, corr))
+
+print("Location pairs with correlation greater than 0.5: ")
+for loc_a, loc_b, corr in loc_corr_list:
+    print(loc_a, loc_b, corr)
+
+# ------------------------------------------------------------------------------------
+
+
+
+
 print("Done")
-# print(PM_TRAIN_total)
+
 
