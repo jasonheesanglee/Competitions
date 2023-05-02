@@ -66,6 +66,16 @@ pm_loc = pmmap_csv["Location"]
 pm_lat = pmmap_csv["Latitude"]
 pm_lng = pmmap_csv["Longitude"]
 
+new = []
+for i in aws_loc:
+    new.append(unicodedata.normalize('NFC', i))
+aws_loc.columns = new
+
+new = []
+for i in pm_loc:
+    new.append(unicodedata.normalize('NFC', i))
+pm_loc.columns = new
+
 # printing out the location on map, using folium.
 
 aws_num = 0
@@ -234,11 +244,15 @@ plt.show()
 
 # ------------------------------------------------------------------------------------
 
+
+
+# ------------------------------------------------------------------------------------
+
 # finding locations that has comparatively high correlation values.
 
 upper_tri = np.triu(corr_matrix, k=1)
 
-row, col = np.where(upper_tri > 0.5)
+row, col = np.where(upper_tri > 0.55)
 
 loc_corr_list = []
 
@@ -248,13 +262,25 @@ for i in range(len(row)):
     corr = upper_tri[row[i], col[i]]
     loc_corr_list.append((loc_a, loc_b, corr))
 
-print("Location pairs with correlation greater than 0.5: ")
+print("Location pairs with correlation greater than 0.55: ")
+
+pre_km_a = []
+pre_km_b = []
+
 for loc_a, loc_b, corr in loc_corr_list:
     print(loc_a, loc_b, corr)
 
 # ------------------------------------------------------------------------------------
 
+# finding distance in km between loc_a and loc_b.
 
+    pre_km_a_pre = df.loc[loc_a, [aws_lat, aws_lng]]
+    pre_km_b_pre = df.loc[loc_b, [aws_lat, aws_lng]]
+    pre_km_a.append(pre_km_a_pre)
+    pre_km_b.append(pre_km_b_pre)
+
+
+# dlon =
 
 
 print("Done")
