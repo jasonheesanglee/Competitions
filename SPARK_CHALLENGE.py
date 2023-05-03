@@ -4,6 +4,7 @@
 # !pip install matplotlib
 # !pip install scipy
 # !pip install seaborn
+# !pip install geopandas
 
 import os
 import numpy as np
@@ -12,13 +13,14 @@ from matplotlib import rc
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import scipy as sp
+from scipy.stats import pearsonr
 import folium
 import math
 import itertools
 import glob
 import seaborn as sns
 import unicodedata
-
+# import geopandas as gpd
 
 
 rc('font', family='AppleGothic')
@@ -62,6 +64,7 @@ aws_loc = awsmap_csv["Location"]
 aws_lat = awsmap_csv["Latitude"]
 aws_lng = awsmap_csv["Longitude"]
 
+
 pm_loc = pmmap_csv["Location"]
 pm_lat = pmmap_csv["Latitude"]
 pm_lng = pmmap_csv["Longitude"]
@@ -99,6 +102,7 @@ map_Kor.save("Climate_Map.html")
 # reading All Test & Train csv files.
 
 file_locations = {
+    'meta' : META,
     'train_aws': TRAIN_AWS,
     'train_pm': TRAIN_PM,
     'test_aws': TEST_AWS,
@@ -264,37 +268,80 @@ for i in range(len(row)):
 
 print("Location pairs with correlation greater than 0.55: ")
 
-greater_than_055 = pd.DataFrame()
-
-pre_km_a = pd.DataFrame()
-pre_km_b = pd.DataFrame()
-
-print(awsmap_csv)
-
 for loc_a, loc_b, corr in loc_corr_list:
-    print(loc_a)
-    print(type(loc_a))
-    print(loc_b)
-    print(type(loc_b))
-    print(corr)
-    print(type(corr))
-    a = [loc_a, loc_b, corr]
-    print(a)
-    print(type(a))
-    print("*"*9)
+    print(loc_a, loc_b, corr)
+    print(type(loc_a),type(loc_b),type(corr))
+
+print()
 
 # ------------------------------------------------------------------------------------
-print(awsmap_csv.loc[awsmap_csv.iloc[:,0] == loc_a, 1].values[0])
 
 
+import pandas as pd
+import numpy as np
 
+# tempDf = awsmap_csv['일시']
+tempDf = awsmap_csv.loc[:,"일시"] # As the origin data is in date - time format, I want to separate the times alone.
+print(tempDf)
 
+for i in awsmap_csv[["일시"]]:
+    time_list.append(i)
+print(time_list)
 
+# Load data from CSV files
+lati_data = pd.read_csv(awsmap_csv, index_col='Latitude')
+longi_data = pd.read_csv(awsmap_csv, index_col='Longitude')
+dir_data = {loc: pd.read_csv(f'{loc}_dir_data.csv', index_col='Time') for loc in lat_lon_data.index}
+speed_data = {loc: pd.read_csv(f'{loc}_speed_data.csv', index_col='Time') for loc in lat_lon_data.index}
 
+# Define function to calculate wind speed increment value
+def calculate_increment_percent(adir, bdir, abtime, t1):
+    return (bdir.loc[t1+abtime] / adir.loc[t1]) * 100
 
+# Define function to find highly correlated locations
+def find_highly_correlated_locations(dir_data, speed_data, lat_lon_data):
+    # Calculate correlation matrix
+    dir_df = pd.concat([dir_data[loc].rename(columns={'Direction': loc}) for loc in dir_data], axis=1)
+    corr_matrix = dir_df.corr()
 
+    # Find highly correlated locations (correlation >= 0.8)
+    highly_corr = np.where(np.abs(corr_matrix) >= 0.8)
+    highly_corr = [(corr_matrix.index[x], corr_matrix.columns[y]) for x, y in zip(*highly_corr) if x != y and x < y]
 
-# dlon =
+    # Create dictionary to store wind speed increment values for each pair of highly correlated locations
+    wind_speed_increments = {}
+
+    # Calculate wind speed increment value for each pair of highly correlated locations
+    for loc1, loc2 in highly_corr:
+        # Get wind direction and wind speed data for both locations
+        dir1 = dir_data[loc1]['Direction']
+        dir2 = dir_data[loc2]['Direction']
+        speed1 = speed_data[loc1]['Speed']
+        speed2 = speed_data[loc2]['Speed']
+
+        # Calculate distances between locations (assuming Earth is a sphere)
+        R = 6371  # Earth's radius in km
+        lat1, lon1 = lat_lon_data.loc[loc1, ['Latitude', 'Longitude']]
+        lat2, lon2 = lat_lon_data.loc[loc2, ['Latitude', 'Longitude']]
+        dlat = np.radians(lat2 - lat1)
+        dlon = np.radians(lon2 - lon1)
+        a = np.sin(dlat/2) * np.sin(dlat/2) + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlon/2) * np.sin(dlon/2)
+        c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
+        d = R * c  # distance in km
+
+        # Calculate time it takes for wind to travel from loc1 to loc2
+        time = d / ((speed1 + speed2) / 2)
+
+        # Calculate wind speed increment value
+        incr_percent = calculate_increment_percent(dir1, dir2, time, 0)
+
+        # Add wind speed increment value to dictionary
+        wind_speed_increments[(loc1, loc2)] = incr_percent
+
+    return wind_speed_increments
+
+# Call function to find highly correlated locations and their wind speed increment values
+wind_speed_increments = find_highly_correlated_locations(dir_data, speed_data, lat_lon_data)
 
 
 print("Done")
