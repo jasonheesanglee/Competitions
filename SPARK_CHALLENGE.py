@@ -134,23 +134,23 @@ if not os.path.exists(PM_CITY_YEAR):
 
 for train_aws_file in all_file_locations['train_aws']:
     # read csv file
-    df = pd.read_csv(train_aws_file)
+    df_aws = pd.read_csv(train_aws_file)
     # get location name from file name
     location = os.path.splitext(os.path.basename(train_aws_file))[0]
     # separate by year and save as separate csv files
     for year in range(4):
-        year_df = df[df['연도'] == year]
+        year_df = df_aws[df_aws['연도'] == year]
         year_filename = AWS_CITY_YEAR + f"train_aws_{location}_{year}.csv"
         year_df.to_csv(year_filename, index=False)
 
 for train_pm_file in all_file_locations['train_pm']:
     # read csv file
-    df = pd.read_csv(train_pm_file)
+    df_pm = pd.read_csv(train_pm_file)
     # get location name from file name
     location = os.path.splitext(os.path.basename(train_pm_file))[0]
     # separate by year and save as separate csv files
     for year in range(4):
-        year_df = df[df['연도'] == year]
+        year_df = df_pm[df_pm['연도'] == year]
         year_filename = PM_CITY_YEAR + f"train_pm_{location}_{year}.csv"
         year_df.to_csv(year_filename, index=False)
 
@@ -182,12 +182,12 @@ for column_name, col_idx in column_names.items():
     temp_list = []
     for train_aws_file in all_file_locations['train_aws']:
         file_name = train_aws_file.split("/")[-1].split(".")[0]
-        df = pd.read_csv(train_aws_file, usecols=[0, 1, col_idx])
-        temp_list.append((file_name, df))
+        df_cols_ony = pd.read_csv(train_aws_file, usecols=[0, 1, col_idx])
+        temp_list.append((file_name, df_cols_ony))
 
-    AWS_TRAIN_total = pd.concat([df[1][column_name] for df in temp_list], axis=1)
+    AWS_TRAIN_total = pd.concat([df_temp[1][column_name] for df_temp in temp_list], axis=1)
     column_name = column_name.replace("/", "_")
-    AWS_TRAIN_total.columns = [df[0] for df in temp_list]
+    AWS_TRAIN_total.columns = [df_temp_new[0] for df_temp_new in temp_list]
 
     AWS_TRAIN_total.insert(loc=0, column='연도', value=temp_list[0][1]["연도"])
     AWS_TRAIN_total.insert(loc=1, column='일시', value=temp_list[0][1]["일시"])
@@ -202,16 +202,16 @@ PM_TRAIN_total = pd.DataFrame()
 # selecting each files within the TRAIN_AWS folder
 for train_pm_file in all_file_locations['train_pm']:
     # read csv file
-    df = pd.read_csv(train_pm_file)
+    df_train_pm = pd.read_csv(train_pm_file)
     # get location name from file name
     column_name = train_pm_file.split("/")[-1].split(".")[0]
     # separate PM column from each file and merge it into one file, save as csv file.
-    column_data = df.iloc[:, 3]
+    column_data = df_train_pm.iloc[:, 3]
     column_data.name = column_name
     PM_TRAIN_total[column_name] = column_data
 
-PM_TRAIN_total['연도'] = df.iloc[:, 0]
-PM_TRAIN_total['일시'] = df.iloc[:, 1]
+PM_TRAIN_total['연도'] = df_train_pm.iloc[:, 0]
+PM_TRAIN_total['일시'] = df_train_pm.iloc[:, 1]
 PM_TRAIN_total = PM_TRAIN_total.set_index(["연도", "일시"])
 
 PM_TRAIN_total.to_csv(PM_CITY_VARIABLE + "PM2_5.csv", index=True)
@@ -264,20 +264,33 @@ for i in range(len(row)):
 
 print("Location pairs with correlation greater than 0.55: ")
 
-pre_km_a = []
-pre_km_b = []
+greater_than_055 = pd.DataFrame()
+
+pre_km_a = pd.DataFrame()
+pre_km_b = pd.DataFrame()
+
+print(awsmap_csv)
 
 for loc_a, loc_b, corr in loc_corr_list:
-    print(loc_a, loc_b, corr)
+    print(loc_a)
+    print(type(loc_a))
+    print(loc_b)
+    print(type(loc_b))
+    print(corr)
+    print(type(corr))
+    a = [loc_a, loc_b, corr]
+    print(a)
+    print(type(a))
+    print("*"*9)
 
 # ------------------------------------------------------------------------------------
+print(awsmap_csv.loc[awsmap_csv.iloc[:,0] == loc_a, 1].values[0])
 
-# finding distance in km between loc_a and loc_b.
 
-    pre_km_a_pre = df.loc[loc_a, [aws_lat, aws_lng]]
-    pre_km_b_pre = df.loc[loc_b, [aws_lat, aws_lng]]
-    pre_km_a.append(pre_km_a_pre)
-    pre_km_b.append(pre_km_b_pre)
+
+
+
+
 
 
 
