@@ -350,5 +350,6 @@ pyrightconfig.json
 *.html
 .DS_Store
 .idea/
-dataset/ALL_CITY_VARIABLE
-dataset/CITY_YEAR
+*.DS_Store
+.dataset/
+/dataset/.DS_Store
