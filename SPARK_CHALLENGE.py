@@ -23,7 +23,6 @@ import re
 import unicodedata
 # import geopandas as gpd
 
-
 rc('font', family='AppleGothic')
 plt.rcParams['axes.unicode_minus'] = False
 
@@ -58,7 +57,6 @@ map_Kor.save("Climate_Map.html")
 awsmap_csv = pd.read_csv(META + "awsmap.csv")
 pmmap_csv = pd.read_csv(META + "pmmap.csv")
 
-# Map saved
 
 # allocating each columns into list variable.
 aws_loc = awsmap_csv["Location"]
@@ -174,7 +172,7 @@ if not os.path.exists(PM_CITY_VARIABLE):
 
 # ------------------------------------------------------------------------------------
 
-new_list = []
+
 column_names = {
     "기온(°C)": 3,
     "풍향(deg)": 4,
@@ -187,8 +185,8 @@ for column_name, col_idx in column_names.items():
     temp_list = []
     for train_aws_file in all_file_locations['train_aws']:
         file_name = train_aws_file.split("/")[-1].split(".")[0]
-        df_cols_ony = pd.read_csv(train_aws_file, usecols=[0, 1, col_idx])
-        temp_list.append((file_name, df_cols_ony))
+        df_cols_only = pd.read_csv(train_aws_file, usecols=[0, 1, col_idx])
+        temp_list.append((file_name, df_cols_only))
 
     AWS_TRAIN_total = pd.concat([df_temp[1][column_name] for df_temp in temp_list], axis=1)
     column_name = column_name.replace("/", "_")
@@ -228,17 +226,12 @@ PM_TRAIN_total.to_csv(PM_CITY_VARIABLE + "PM2_5.csv", index=True)
 
 rel_wind_dir = pd.read_csv(AWS_CITY_VARIABLE + "풍향(deg).csv")
 
-print("Relative Wind Direction : ")
-print(rel_wind_dir)
 locs_aws = list(rel_wind_dir.columns)
 new = []
 for i in locs_aws:
     new.append(unicodedata.normalize('NFC', i))
 rel_wind_dir.columns = new
-
 rel_w_d = rel_wind_dir.iloc[:, 2:]
-print("Relative Wind Direction without year and date : ")
-print(rel_w_d)
 
 # ------------------------------------------------------------------------------------
 
@@ -399,6 +392,12 @@ def fillPmAllMdata(df):
                 count = 0
     return df
 
+# def eachColumns(df):
+#
+#     df = pd.DataFrame(df)
+#     for i in df.columns: # for each column
+
+
 
 # awsPath = TRAIN_AWS + "*.csv"
 # pmPath = TRAIN_PM + "*.csv"
@@ -416,10 +415,38 @@ PM_paths = all_file_locations["train_pm"]
 for i in range(len(AWS_paths)):
     AWS_paths[i] = unicodedata.normalize('NFC', AWS_paths[i])
 
+
+
 for i in range(len(AWS_paths)):
     globals()[f'{AWS_paths[i][10:-4]}'] = pd.read_csv(f'{AWS_paths[i]}')
-    data = globals()[f'{AWS_paths[i][10:-4]}'] # type = pd.DataFrame
+    data = globals()[f'{AWS_paths[i][10:-4]}'] # each file / type = pd.DataFrame
+    data[["Date", "Time"]] = data["일시"].str.split(" ", expand=True)  #pd.DataFrame(str(data["일시"]).split(" ")[0])
+
+    date_range = list(data["Time"][0:])
+    print(data.columns)
+    for columns_each in data[data.columns[3:8]]:
+        print(columns_each)
+        ts_list = [pd.Series(np.array(data[columns_each]), index=list(date_range)).interpolate()]
+        ts = pd.concat(ts_list)
+        data = data[columns_each].reset_index(drop=True)
+        ts_interpolate = ts.interpolate()
+        ts_interpolate = ts_interpolate.groupby(columns_each, sort=False)
+        data[columns_each] = ts_interpolate[columns_each] #.values
+    # for columns_each in data[data.columns[3:8]]:
+    #     print(columns_each)
+    #     ts_list = [pd.Series(np.array(data[columns_each]), index=list(date_range)).interpolate()]
+    #     ts = pd.concat(ts_list)
+    #     ts_interpolate = ts.interpolate()
+    #     ts_interpolate.index.name = 'index'  # assign a name to the index column
+    #     ts_interpolate = ts_interpolate.reset_index()  # reset index and create a new column 'index'
+    #     ts_interpolate = ts_interpolate.rename(columns={columns_each : columns_each + "new"})
+    #     data[columns_each] = ts_interpolate[columns_each]  # update the DataFrame with interpolated values
+
+    # 여기에 export to csv 있어야함
 print(type(data))
+
+
+
 
 # selecting each files within the TRAIN_AWS folder
 
