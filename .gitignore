@@ -352,4 +352,8 @@ pyrightconfig.json
 .idea/
 *.DS_Store
 .dataset/
-/dataset/.DS_Store
+*.csv
+*.xlsx
+*.txt
+*.DS_Store
+dataset/.DS_Store
