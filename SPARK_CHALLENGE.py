@@ -227,6 +227,8 @@ PM_TRAIN_total.to_csv(PM_CITY_VARIABLE + "PM2_5.csv", index=True)
 # One of the file created from above will be used.
 
 rel_wind_dir = pd.read_csv(AWS_CITY_VARIABLE + "풍향(deg).csv")
+
+print("Relative Wind Direction : ")
 print(rel_wind_dir)
 locs_aws = list(rel_wind_dir.columns)
 new = []
@@ -235,6 +237,7 @@ for i in locs_aws:
 rel_wind_dir.columns = new
 
 rel_w_d = rel_wind_dir.iloc[:, 2:]
+print("Relative Wind Direction without year and date : ")
 print(rel_w_d)
 
 # ------------------------------------------------------------------------------------
@@ -246,10 +249,6 @@ corr_matrix = rel_w_d.corr()
 sns.heatmap(corr_matrix, annot=True, cmap="coolwarm")
 plt.title("Correlation Matrix of AWS Variables")
 plt.show()
-
-# ------------------------------------------------------------------------------------
-
-
 
 # ------------------------------------------------------------------------------------
 
@@ -401,24 +400,27 @@ def fillPmAllMdata(df):
     return df
 
 
-awsPath = TRAIN_AWS + "*.csv"
-pmPath = TRAIN_PM + "*.csv"
+# awsPath = TRAIN_AWS + "*.csv"
+# pmPath = TRAIN_PM + "*.csv"
 
-AWS_paths = glob.glob(awsPath)
-PM_paths = glob.glob(pmPath)
-AWS_paths.sort()
-PM_paths.sort()
-conAWS_List = list()
-conPM_List = list()
+# AWS_paths = glob.glob(awsPath)
+# PM_paths = glob.glob(pmPath)
+# AWS_paths.sort()
+# PM_paths.sort()
+# conAWS_List = list()
+# conPM_List = list()
+
+AWS_paths = all_file_locations["train_aws"]
+PM_paths = all_file_locations["train_pm"]
 
 for i in range(len(AWS_paths)):
     AWS_paths[i] = unicodedata.normalize('NFC', AWS_paths[i])
 
 for i in range(len(AWS_paths)):
     globals()[f'{AWS_paths[i][10:-4]}'] = pd.read_csv(f'{AWS_paths[i]}')
-    data = globals()[f'{AWS_paths[i][10:-4]}']
+    data = globals()[f'{AWS_paths[i][10:-4]}'] # type = pd.DataFrame
+print(type(data))
 
-print(data)
 # selecting each files within the TRAIN_AWS folder
 
 for i in range(len(PM_paths)):
