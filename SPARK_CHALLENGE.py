@@ -276,9 +276,7 @@ print()
 
 # ------------------------------------------------------------------------------------
 
-
-import pandas as pd
-import numpy as np
+'''
 
 # tempDf = awsmap_csv['일시']
 tempDf = awsmap_csv.loc[:,"일시"] # As the origin data is in date - time format, I want to separate the times alone.
@@ -314,10 +312,10 @@ def find_highly_correlated_locations(dir_data, speed_data, lat_lon_data):
     # Calculate wind speed increment value for each pair of highly correlated locations
     for loc1, loc2 in highly_corr:
         # Get wind direction and wind speed data for both locations
-        dir1 = dir_data[loc1]['Direction']
-        dir2 = dir_data[loc2]['Direction']
-        speed1 = speed_data[loc1]['Speed']
-        speed2 = speed_data[loc2]['Speed']
+        dir1 = dir_data[loc1]['풍향']
+        dir2 = dir_data[loc2]['풍향']
+        speed1 = speed_data[loc1]['풍속']
+        speed2 = speed_data[loc2]['풍속']
 
         # Calculate distances between locations (assuming Earth is a sphere)
         R = 6371  # Earth's radius in km
@@ -342,7 +340,7 @@ def find_highly_correlated_locations(dir_data, speed_data, lat_lon_data):
 
 # Call function to find highly correlated locations and their wind speed increment values
 wind_speed_increments = find_highly_correlated_locations(dir_data, speed_data, lat_lon_data)
-
+'''
 
 print("Done")
 
