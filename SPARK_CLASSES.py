@@ -20,19 +20,19 @@ import unicodedata
 def fillAwsAllMdata(df):
         df = pd.DataFrame(df)
         count = 0
-        for k in range(3,8,1):
-            df_tmp = df.iloc[:,k]
+        for k in range(3, 8, 1):
+            df_tmp = df.iloc[:, k]
             nullIndex = df_tmp.index[df.isnull().any(axis=1)].tolist()
             for i in range(len(nullIndex)):
                 if i + 1 == len(nullIndex):
-                    fillData = float(df.iloc[nullIndex[i]-count-1,k])
-                    df.iloc[nullIndex[i]-count-1:,k] = df.iloc[nullIndex[i]-count-1:,k].fillna(fillData)
-                elif nullIndex[i+1] - nullIndex[i] == 1:
+                    fillData = float(df.iloc[nullIndex[i] - count-1, k])
+                    df.iloc[nullIndex[i] - count-1:, k] = df.iloc[nullIndex[i] - count-1:, k].fillna(fillData)
+                elif nullIndex[i + 1] - nullIndex[i] == 1:
                     count += 1
                 else:
                     if count==0:
-                        fillData = float((df.iloc[nullIndex[i]-1,k]+df.iloc[nullIndex[i]+1,k])/2)
-                        df.iloc[nullIndex[i],k] = fillData
+                        fillData = float((df.iloc[nullIndex[i] - 1,k]+df.iloc[nullIndex[i] + 1, k]) / 2)
+                        df.iloc[nullIndex[i], k] = fillData
                     else:
                         fillData = float((df.iloc[nullIndex[i]-count-1,k]+df.iloc[nullIndex[i]+1,k])/2)
                         df.iloc[nullIndex[i]-count-1:nullIndex[i]+1,k] = df.iloc[nullIndex[i]-count-1:nullIndex[i]+1,k].fillna(fillData)
@@ -48,21 +48,21 @@ def fillPmAllMdata(df):
         nullIndex = df.index[df.isnull().any(axis=1)].tolist()
         for i in range(len(nullIndex)):
                 if i + 1 == len(nullIndex):
-                    fillData = float(df.iloc[nullIndex[i]-count-1,k])
-                    df.iloc[nullIndex[i]-count-1:,k] = df.iloc[nullIndex[i]-count-1:,k].fillna(fillData)
-                elif nullIndex[i+1] - nullIndex[i] == 1:
+                    fillData = float(df.iloc[nullIndex[i] - count-1, k])
+                    df.iloc[nullIndex[i] - count-1:, k] = df.iloc[nullIndex[i] - count-1:, k].fillna(fillData)
+                elif nullIndex[i + 1] - nullIndex[i] == 1:
                     count += 1
                 else:
                     if count==0:
-                        fillData = float((df.iloc[nullIndex[i]-1,k]+df.iloc[nullIndex[i]+1,k])/2)
-                        df.iloc[nullIndex[i],k] = fillData
+                        fillData = float((df.iloc[nullIndex[i] - 1, k]+df.iloc[nullIndex[i] + 1, k]) / 2)
+                        df.iloc[nullIndex[i], k] = fillData
                     else:
-                        if df.isnull().iloc[nullIndex[i]-count,k]:
-                             fillData = df.iloc[nullIndex[i]+2,k]
-                             df.iloc[:nullIndex[i]+1,k] = df.iloc[:nullIndex[i]+1,k].fillna(fillData)
+                        if df.isnull().iloc[nullIndex[i] - count, k]:
+                             fillData = df.iloc[nullIndex[i] + 2, k]
+                             df.iloc[:nullIndex[i] + 1, k] = df.iloc[:nullIndex[i] + 1, k].fillna(fillData)
                         else:
-                            fillData = float((df.iloc[nullIndex[i]-count-1,k]+df.iloc[nullIndex[i]+1,k])/2)
-                            df.iloc[nullIndex[i]-count-1:nullIndex[i]+1,k] = df.iloc[nullIndex[i]-count-1:nullIndex[i]+1,k].fillna(fillData)
+                            fillData = float((df.iloc[nullIndex[i] - count-1, k] + df.iloc[nullIndex[i] + 1, k]) / 2)
+                            df.iloc[nullIndex[i] - count-1:nullIndex[i] + 1,k] = df.iloc[nullIndex[i] - count-1:nullIndex[i] + 1, k].fillna(fillData)
                         count = 0
         return df
 
@@ -74,8 +74,9 @@ AWS_paths.sort()
 PM_paths.sort()
 conAWS_List = list()
 conPM_List = list()
+
 for i in range(len(AWS_paths)):
-    AWS_paths[i] = unicodedata.normalize('NFC',AWS_paths[i])
+    AWS_paths[i] = unicodedata.normalize('NFC', AWS_paths[i])
 
 
 # AWS 한글 지역명으로 경로값 가져오기
@@ -98,8 +99,9 @@ for i in range(len(AWS_paths)):
         globals()[f'{AWS_paths[i][10:-4]}_AWS_CON'] = globals()[f'{AWS_paths[i][10:-4]}_AWS_CON'].drop('연도',axis=1)
         conAWS_List.append(globals()[f'{AWS_paths[i][10:-4]}_AWS_CON'])
 merged_AWS_df = pd.concat(conAWS_List,axis=1)
+
 for i in range(len(PM_paths)):
-    PM_paths[i] = unicodedata.normalize('NFC',PM_paths[i])
+    PM_paths[i] = unicodedata.normalize('NFC', PM_paths[i])
 
 
 # PM 한글 지역명으로 경로값 가져오기

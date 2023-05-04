@@ -19,6 +19,7 @@ import math
 import itertools
 import glob
 import seaborn as sns
+import re
 import unicodedata
 # import geopandas as gpd
 
@@ -252,6 +253,8 @@ plt.show()
 
 # ------------------------------------------------------------------------------------
 
+
+'''
 # finding locations that has comparatively high correlation values.
 
 upper_tri = np.triu(corr_matrix, k=1)
@@ -273,7 +276,7 @@ for loc_a, loc_b, corr in loc_corr_list:
     print(type(loc_a),type(loc_b),type(corr))
 
 print()
-
+'''
 # ------------------------------------------------------------------------------------
 
 '''
@@ -342,6 +345,89 @@ def find_highly_correlated_locations(dir_data, speed_data, lat_lon_data):
 wind_speed_increments = find_highly_correlated_locations(dir_data, speed_data, lat_lon_data)
 '''
 
-print("Done")
+# ------------------------------------------------------------------------------------
+print("It's a new life! New Attempt!")
 
+def fillAwsAllMdata(df):
+    df = pd.DataFrame(df)
+    count = 0
+    for k in range(3, 8, 1):
+        df_tmp = df.iloc[:, k]
+        nullIndex = df_tmp.index[df.isnull().any(axis=1)].tolist()
+        for i in range(len(nullIndex)):
+            if i + 1 == len(nullIndex):
+                fillData = float(df.iloc[nullIndex[i] - count - 1, k])
+                df.iloc[nullIndex[i] - count - 1:, k] = df.iloc[nullIndex[i] - count - 1:, k].fillna(fillData)
+            elif nullIndex[i + 1] - nullIndex[i] == 1:
+                count += 1
+            else:
+                if count == 0:
+                    fillData = float((df.iloc[nullIndex[i] - 1, k] + df.iloc[nullIndex[i] + 1, k]) / 2)
+                    df.iloc[nullIndex[i], k] = fillData
+                else:
+                    fillData = float((df.iloc[nullIndex[i] - count - 1, k] + df.iloc[nullIndex[i] + 1, k]) / 2)
+                    df.iloc[nullIndex[i] - count - 1:nullIndex[i] + 1, k] = df.iloc[
+                                                                            nullIndex[i] - count - 1:nullIndex[i] + 1,
+                                                                            k].fillna(fillData)
+                    count = 0
+    return df
+
+def fillPmAllMdata(df):
+    df = pd.DataFrame(df)
+    count = 0
+    k = 3
+    nullIndex = df.index[df.isnull().any(axis=1)].tolist()
+    for i in range(len(nullIndex)):
+        if i + 1 == len(nullIndex):
+            fillData = float(df.iloc[nullIndex[i] - count - 1, k])
+            df.iloc[nullIndex[i] - count - 1:, k] = df.iloc[nullIndex[i] - count - 1:, k].fillna(fillData)
+        elif nullIndex[i + 1] - nullIndex[i] == 1:
+            count += 1
+        else:
+            if count == 0:
+                fillData = float((df.iloc[nullIndex[i] - 1, k] + df.iloc[nullIndex[i] + 1, k]) / 2)
+                df.iloc[nullIndex[i], k] = fillData
+            else:
+                if df.isnull().iloc[nullIndex[i] - count, k]:
+                    fillData = df.iloc[nullIndex[i] + 2, k]
+                    df.iloc[:nullIndex[i] + 1, k] = df.iloc[:nullIndex[i] + 1, k].fillna(fillData)
+                else:
+                    fillData = float((df.iloc[nullIndex[i] - count - 1, k] + df.iloc[nullIndex[i] + 1, k]) / 2)
+                    df.iloc[nullIndex[i] - count - 1:nullIndex[i] + 1, k] = df.iloc[
+                                                                            nullIndex[i] - count - 1:nullIndex[
+                                                                                                         i] + 1,
+                                                                            k].fillna(fillData)
+                count = 0
+    return df
+
+
+awsPath = TRAIN_AWS + "*.csv"
+pmPath = TRAIN_PM + "*.csv"
+
+AWS_paths = glob.glob(awsPath)
+PM_paths = glob.glob(pmPath)
+AWS_paths.sort()
+PM_paths.sort()
+conAWS_List = list()
+conPM_List = list()
+
+for i in range(len(AWS_paths)):
+    AWS_paths[i] = unicodedata.normalize('NFC', AWS_paths[i])
+
+for i in range(len(AWS_paths)):
+    globals()[f'{AWS_paths[i][10:-4]}'] = pd.read_csv(f'{AWS_paths[i]}')
+    data = globals()[f'{AWS_paths[i][10:-4]}']
+
+print(data)
+# selecting each files within the TRAIN_AWS folder
+
+for i in range(len(PM_paths)):
+    PM_paths[i] = unicodedata.normalize('NFC', PM_paths[i])
+
+
+# date_range = pd.date_range(start=AWS_paths)
+
+
+
+print("done")
 
