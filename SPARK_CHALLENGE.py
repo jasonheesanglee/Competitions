@@ -5,6 +5,7 @@
 # !pip install scipy
 # !pip install seaborn
 # !pip install geopandas
+# !pip install haversine
 
 import os
 import numpy as np
@@ -15,13 +16,10 @@ import matplotlib.font_manager as fm
 import scipy as sp
 from scipy.stats import pearsonr
 import folium
-import math
-import itertools
 import glob
 import seaborn as sns
-import re
 import unicodedata
-# import geopandas as gpd
+import haversine as hs
 
 rc('font', family='AppleGothic')
 plt.rcParams['axes.unicode_minus'] = False
@@ -48,20 +46,37 @@ AWS_CITY_VARIABLE = dataset + "ALL_CITY_VARIABLE/AWS_TRAIN_VARIABLE/"
 PM_CITY_VARIABLE = dataset + "ALL_CITY_VARIABLE/PM_TRAIN_VARIABLE/"
 AWS_CITY_YEAR = dataset + "CITY_YEAR/AWS_TRAIN_CITY_YEAR/"
 PM_CITY_YEAR = dataset + "CITY_YEAR/PM_TRAIN_CITY_YEAR/"
+Linear_Interpolate = dataset + "Linear_Interpolate_Filled/"
+LI_AWS = Linear_Interpolate + "Linear_TRAIN_AWS/"
 
+# ------------------------------------------------------------------------------------
 
 map_Kor = folium.Map(location=(36.62, 126.984873), zoom_start = 9, tiles="Stamen Terrain")
 map_Kor.save("Climate_Map.html")
 
 # reading map data csv files.
-awsmap_csv = pd.read_csv(META + "awsmap.csv")
-pmmap_csv = pd.read_csv(META + "pmmap.csv")
-
+awsmap_csv = pd.read_csv(META + "awsmap.csv", encoding="UTF-8")
+pmmap_csv = pd.read_csv(META + "pmmap.csv", encoding="UTF-8")
 
 # allocating each columns into list variable.
 aws_loc = awsmap_csv["Location"]
 aws_lat = awsmap_csv["Latitude"]
 aws_lng = awsmap_csv["Longitude"]
+
+def obs_distance(df1, loc1, df2, loc2):
+    for n in range(len(df1["Location"])):
+        df1_loc = df1["Location"][i]
+        df2_loc = df2["Location"][j]
+        df1_lat = df1["Latitude"][i]
+        df2_lat = df2["Latitude"][j]
+        df1_lng = df1["Longitude"][i]
+        df2_lng = df2["Longitude"][j]
+
+        point_1 = (df1_lat, df1_lng)
+        point_2 = (df2_lat, df2_lng)
+        distance = hs.haversine(point_1, point_2)
+        where = f"{df1_loc} and {df2_loc}"
+        return (f"{where} = {distance}")
 
 
 pm_loc = pmmap_csv["Location"]
@@ -119,6 +134,32 @@ keys are "train_aws", "train_pm", "test_aws", "test_pm"
 # ------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------
 
+# Converting all column names into English
+
+for files in all_file_locations['train_aws']:
+    train_aws_files = pd.read_csv(files)
+    train_aws_files.rename(columns={"연도":"Year", "일시":"DateTime", "지점":"Observatory","기온(°C)":"Temperature", "풍향(deg)":"Wind_Direction", "풍속(m/s)":"Wind_Speed", "강수량(mm)":"Precipitation", "습도(%)":"Humidity"}, inplace=True)
+    train_aws_files.to_csv(files, index=False)
+
+
+for files in all_file_locations['test_aws']:
+    test_aws_files = pd.read_csv(files)
+    test_aws_files.rename(columns={"연도":"Year", "일시":"DateTime", "지점":"Observatory","기온(°C)":"Temperature", "풍향(deg)":"Wind_Direction", "풍속(m/s)":"Wind_Speed", "강수량(mm)":"Precipitation", "습도(%)":"Humidity"}, inplace=True)
+    test_aws_files.to_csv(files, index=False)
+
+for files in all_file_locations['train_pm']:
+    train_pm_files = pd.read_csv(files)
+    train_pm_files.rename(columns={"연도":"Year", "일시":"DateTime", "측정소":"Observatory"}, inplace=True)
+    train_pm_files.to_csv(files, index=False)
+
+
+for files in all_file_locations['test_pm']:
+    test_pm_files = pd.read_csv(files)
+    test_pm_files.rename(columns={"연도":"Year", "일시":"DateTime", "측정소":"Observatory"}, inplace=True)
+    test_pm_files.to_csv(files, index=False)
+
+# ------------------------------------------------------------------------------------
+
 # create new folders to store all csv files (per city, per year)
 if not os.path.exists(dataset + "CITY_YEAR"):
     os.mkdir(dataset + "CITY_YEAR")
@@ -129,10 +170,24 @@ if not os.path.exists(AWS_CITY_YEAR):
 if not os.path.exists(PM_CITY_YEAR):
     os.mkdir(PM_CITY_YEAR)
 
+if not os.path.exists(dataset + "ALL_CITY_VARIABLE"):
+    os.mkdir(dataset + "ALL_CITY_VARIABLE")
+
+if not os.path.exists(AWS_CITY_VARIABLE):
+    os.mkdir(AWS_CITY_VARIABLE)
+
+if not os.path.exists(PM_CITY_VARIABLE):
+    os.mkdir(PM_CITY_VARIABLE)
+
+if not os.path.exists(dataset + "Linear_Interpolate_Filled"):
+    os.mkdir(dataset + "Linear_Interpolate_Filled")
+
+if not os.path.exists(LI_AWS):
+    os.mkdir(LI_AWS)
+
+
 # ------------------------------------------------------------------------------------
-
 # separate csv file by city and years
-
 # selecting each files within the TRAIN_AWS folder
 
 for train_aws_file in all_file_locations['train_aws']:
@@ -142,7 +197,7 @@ for train_aws_file in all_file_locations['train_aws']:
     location = os.path.splitext(os.path.basename(train_aws_file))[0]
     # separate by year and save as separate csv files
     for year in range(4):
-        year_df = df_aws[df_aws['연도'] == year]
+        year_df = df_aws[df_aws['Year'] == year]
         year_filename = AWS_CITY_YEAR + f"train_aws_{location}_{year}.csv"
         year_df.to_csv(year_filename, index=False)
 
@@ -153,32 +208,20 @@ for train_pm_file in all_file_locations['train_pm']:
     location = os.path.splitext(os.path.basename(train_pm_file))[0]
     # separate by year and save as separate csv files
     for year in range(4):
-        year_df = df_pm[df_pm['연도'] == year]
+        year_df = df_pm[df_pm['Year'] == year]
         year_filename = PM_CITY_YEAR + f"train_pm_{location}_{year}.csv"
         year_df.to_csv(year_filename, index=False)
 
 # ------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------
 
-# create new folders to store all csv files (per variable, all cities combined)
-if not os.path.exists(dataset + "ALL_CITY_VARIABLE"):
-    os.mkdir(dataset + "ALL_CITY_VARIABLE")
-
-if not os.path.exists(AWS_CITY_VARIABLE):
-    os.mkdir(AWS_CITY_VARIABLE)
-
-if not os.path.exists(PM_CITY_VARIABLE):
-    os.mkdir(PM_CITY_VARIABLE)
-
-# ------------------------------------------------------------------------------------
-
 
 column_names = {
-    "기온(°C)": 3,
-    "풍향(deg)": 4,
-    "풍속(m/s)": 5,
-    "강수량(mm)": 6,
-    "습도(%)": 7
+    "Temperature": 3,
+    "Wind_Direction": 4,
+    "Wind_Speed": 5,
+    "Precipitation": 6,
+    "Humidity": 7
 }
 
 for column_name, col_idx in column_names.items():
@@ -192,8 +235,8 @@ for column_name, col_idx in column_names.items():
     column_name = column_name.replace("/", "_")
     AWS_TRAIN_total.columns = [df_temp_new[0] for df_temp_new in temp_list]
 
-    AWS_TRAIN_total.insert(loc=0, column='연도', value=temp_list[0][1]["연도"])
-    AWS_TRAIN_total.insert(loc=1, column='일시', value=temp_list[0][1]["일시"])
+    AWS_TRAIN_total.insert(loc=0, column='Year', value=temp_list[0][1]["Year"])
+    AWS_TRAIN_total.insert(loc=1, column='DateTime', value=temp_list[0][1]["DateTime"])
 
     AWS_TRAIN_total.to_csv(AWS_CITY_VARIABLE + f"{column_name}.csv", index=False)
 
@@ -213,9 +256,9 @@ for train_pm_file in all_file_locations['train_pm']:
     column_data.name = column_name
     PM_TRAIN_total[column_name] = column_data
 
-PM_TRAIN_total['연도'] = df_train_pm.iloc[:, 0]
-PM_TRAIN_total['일시'] = df_train_pm.iloc[:, 1]
-PM_TRAIN_total = PM_TRAIN_total.set_index(["연도", "일시"])
+PM_TRAIN_total['Year'] = df_train_pm.iloc[:, 0]
+PM_TRAIN_total['DateTime'] = df_train_pm.iloc[:, 1]
+PM_TRAIN_total = PM_TRAIN_total.set_index(["Year", "DateTime"])
 
 PM_TRAIN_total.to_csv(PM_CITY_VARIABLE + "PM2_5.csv", index=True)
 
@@ -224,7 +267,7 @@ PM_TRAIN_total.to_csv(PM_CITY_VARIABLE + "PM2_5.csv", index=True)
 # finding wind-direction correlation between cities.
 # One of the file created from above will be used.
 
-rel_wind_dir = pd.read_csv(AWS_CITY_VARIABLE + "풍향(deg).csv")
+rel_wind_dir = pd.read_csv(AWS_CITY_VARIABLE + "Wind_Direction.csv")
 
 locs_aws = list(rel_wind_dir.columns)
 new = []
@@ -245,218 +288,46 @@ plt.show()
 
 # ------------------------------------------------------------------------------------
 
-
-'''
-# finding locations that has comparatively high correlation values.
-
-upper_tri = np.triu(corr_matrix, k=1)
-
-row, col = np.where(upper_tri > 0.55)
-
-loc_corr_list = []
-
-for i in range(len(row)):
-    loc_a = locs_aws[row[i]+2]
-    loc_b = locs_aws[col[i] + 2]
-    corr = upper_tri[row[i], col[i]]
-    loc_corr_list.append((loc_a, loc_b, corr))
-
-print("Location pairs with correlation greater than 0.55: ")
-
-for loc_a, loc_b, corr in loc_corr_list:
-    print(loc_a, loc_b, corr)
-    print(type(loc_a),type(loc_b),type(corr))
-
-print()
-'''
 # ------------------------------------------------------------------------------------
 
-'''
-
-# tempDf = awsmap_csv['일시']
-tempDf = awsmap_csv.loc[:,"일시"] # As the origin data is in date - time format, I want to separate the times alone.
-print(tempDf)
-
-for i in awsmap_csv[["일시"]]:
-    time_list.append(i)
-print(time_list)
-
-# Load data from CSV files
-lati_data = pd.read_csv(awsmap_csv, index_col='Latitude')
-longi_data = pd.read_csv(awsmap_csv, index_col='Longitude')
-dir_data = {loc: pd.read_csv(f'{loc}_dir_data.csv', index_col='Time') for loc in lat_lon_data.index}
-speed_data = {loc: pd.read_csv(f'{loc}_speed_data.csv', index_col='Time') for loc in lat_lon_data.index}
-
-# Define function to calculate wind speed increment value
-def calculate_increment_percent(adir, bdir, abtime, t1):
-    return (bdir.loc[t1+abtime] / adir.loc[t1]) * 100
-
-# Define function to find highly correlated locations
-def find_highly_correlated_locations(dir_data, speed_data, lat_lon_data):
-    # Calculate correlation matrix
-    dir_df = pd.concat([dir_data[loc].rename(columns={'Direction': loc}) for loc in dir_data], axis=1)
-    corr_matrix = dir_df.corr()
-
-    # Find highly correlated locations (correlation >= 0.8)
-    highly_corr = np.where(np.abs(corr_matrix) >= 0.8)
-    highly_corr = [(corr_matrix.index[x], corr_matrix.columns[y]) for x, y in zip(*highly_corr) if x != y and x < y]
-
-    # Create dictionary to store wind speed increment values for each pair of highly correlated locations
-    wind_speed_increments = {}
-
-    # Calculate wind speed increment value for each pair of highly correlated locations
-    for loc1, loc2 in highly_corr:
-        # Get wind direction and wind speed data for both locations
-        dir1 = dir_data[loc1]['풍향']
-        dir2 = dir_data[loc2]['풍향']
-        speed1 = speed_data[loc1]['풍속']
-        speed2 = speed_data[loc2]['풍속']
-
-        # Calculate distances between locations (assuming Earth is a sphere)
-        R = 6371  # Earth's radius in km
-        lat1, lon1 = lat_lon_data.loc[loc1, ['Latitude', 'Longitude']]
-        lat2, lon2 = lat_lon_data.loc[loc2, ['Latitude', 'Longitude']]
-        dlat = np.radians(lat2 - lat1)
-        dlon = np.radians(lon2 - lon1)
-        a = np.sin(dlat/2) * np.sin(dlat/2) + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlon/2) * np.sin(dlon/2)
-        c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
-        d = R * c  # distance in km
-
-        # Calculate time it takes for wind to travel from loc1 to loc2
-        time = d / ((speed1 + speed2) / 2)
-
-        # Calculate wind speed increment value
-        incr_percent = calculate_increment_percent(dir1, dir2, time, 0)
-
-        # Add wind speed increment value to dictionary
-        wind_speed_increments[(loc1, loc2)] = incr_percent
-
-    return wind_speed_increments
-
-# Call function to find highly correlated locations and their wind speed increment values
-wind_speed_increments = find_highly_correlated_locations(dir_data, speed_data, lat_lon_data)
-'''
-
-# ------------------------------------------------------------------------------------
-print("It's a new life! New Attempt!")
-
-def fillAwsAllMdata(df):
-    df = pd.DataFrame(df)
-    count = 0
-    for k in range(3, 8, 1):
-        df_tmp = df.iloc[:, k]
-        nullIndex = df_tmp.index[df.isnull().any(axis=1)].tolist()
-        for i in range(len(nullIndex)):
-            if i + 1 == len(nullIndex):
-                fillData = float(df.iloc[nullIndex[i] - count - 1, k])
-                df.iloc[nullIndex[i] - count - 1:, k] = df.iloc[nullIndex[i] - count - 1:, k].fillna(fillData)
-            elif nullIndex[i + 1] - nullIndex[i] == 1:
-                count += 1
-            else:
-                if count == 0:
-                    fillData = float((df.iloc[nullIndex[i] - 1, k] + df.iloc[nullIndex[i] + 1, k]) / 2)
-                    df.iloc[nullIndex[i], k] = fillData
-                else:
-                    fillData = float((df.iloc[nullIndex[i] - count - 1, k] + df.iloc[nullIndex[i] + 1, k]) / 2)
-                    df.iloc[nullIndex[i] - count - 1:nullIndex[i] + 1, k] = df.iloc[
-                                                                            nullIndex[i] - count - 1:nullIndex[i] + 1,
-                                                                            k].fillna(fillData)
-                    count = 0
-    return df
-
-def fillPmAllMdata(df):
-    df = pd.DataFrame(df)
-    count = 0
-    k = 3
-    nullIndex = df.index[df.isnull().any(axis=1)].tolist()
-    for i in range(len(nullIndex)):
-        if i + 1 == len(nullIndex):
-            fillData = float(df.iloc[nullIndex[i] - count - 1, k])
-            df.iloc[nullIndex[i] - count - 1:, k] = df.iloc[nullIndex[i] - count - 1:, k].fillna(fillData)
-        elif nullIndex[i + 1] - nullIndex[i] == 1:
-            count += 1
-        else:
-            if count == 0:
-                fillData = float((df.iloc[nullIndex[i] - 1, k] + df.iloc[nullIndex[i] + 1, k]) / 2)
-                df.iloc[nullIndex[i], k] = fillData
-            else:
-                if df.isnull().iloc[nullIndex[i] - count, k]:
-                    fillData = df.iloc[nullIndex[i] + 2, k]
-                    df.iloc[:nullIndex[i] + 1, k] = df.iloc[:nullIndex[i] + 1, k].fillna(fillData)
-                else:
-                    fillData = float((df.iloc[nullIndex[i] - count - 1, k] + df.iloc[nullIndex[i] + 1, k]) / 2)
-                    df.iloc[nullIndex[i] - count - 1:nullIndex[i] + 1, k] = df.iloc[
-                                                                            nullIndex[i] - count - 1:nullIndex[
-                                                                                                         i] + 1,
-                                                                            k].fillna(fillData)
-                count = 0
-    return df
-
-# def eachColumns(df):
-#
-#     df = pd.DataFrame(df)
-#     for i in df.columns: # for each column
-
-
-
-# awsPath = TRAIN_AWS + "*.csv"
-# pmPath = TRAIN_PM + "*.csv"
-
-# AWS_paths = glob.glob(awsPath)
-# PM_paths = glob.glob(pmPath)
-# AWS_paths.sort()
-# PM_paths.sort()
-# conAWS_List = list()
-# conPM_List = list()
+# Filling in Missing Values
 
 AWS_paths = all_file_locations["train_aws"]
-PM_paths = all_file_locations["train_pm"]
 
-for i in range(len(AWS_paths)):
-    AWS_paths[i] = unicodedata.normalize('NFC', AWS_paths[i])
+# 1. Linear Interpolation
 
+for train_aws_file in all_file_locations['train_aws']:
+    train_aws_file = unicodedata.normalize('NFC', train_aws_file)
 
-
-for i in range(len(AWS_paths)):
-    globals()[f'{AWS_paths[i][10:-4]}'] = pd.read_csv(f'{AWS_paths[i]}')
-    data = globals()[f'{AWS_paths[i][10:-4]}'] # each file / type = pd.DataFrame
-    data[["Date", "Time"]] = data["일시"].str.split(" ", expand=True)  #pd.DataFrame(str(data["일시"]).split(" ")[0])
-
+# Selecting each files within the TRAIN_AWS folder.
+for train_aws_file in all_file_locations['train_aws']:
+    # Read each file.
+    data = pd.read_csv(train_aws_file)
+    # Added one more line of code to get the location name for future usage.
+    location_name = train_aws_file.split("/")[-1].split(".")[0]
+    '''
+    Dead Codes (No Longer Used, Keeping it for future reference.)
+    # Splitting DateTime into separate columns of Date and Time.
+    data[["Date", "Time"]] = data["DateTime"].str.split(" ", expand=True)
+    # Convert time into Date_Range
     date_range = list(data["Time"][0:])
-    print(data.columns)
+    '''
+    # Interpolate the data and replace the old columns.
     for columns_each in data[data.columns[3:8]]:
-        print(columns_each)
-        ts_list = [pd.Series(np.array(data[columns_each]), index=list(date_range)).interpolate()]
-        ts = pd.concat(ts_list)
-        data = data[columns_each].reset_index(drop=True)
-        ts_interpolate = ts.interpolate()
-        ts_interpolate = ts_interpolate.groupby(columns_each, sort=False)
-        data[columns_each] = ts_interpolate[columns_each] #.values
-    # for columns_each in data[data.columns[3:8]]:
-    #     print(columns_each)
-    #     ts_list = [pd.Series(np.array(data[columns_each]), index=list(date_range)).interpolate()]
-    #     ts = pd.concat(ts_list)
-    #     ts_interpolate = ts.interpolate()
-    #     ts_interpolate.index.name = 'index'  # assign a name to the index column
-    #     ts_interpolate = ts_interpolate.reset_index()  # reset index and create a new column 'index'
-    #     ts_interpolate = ts_interpolate.rename(columns={columns_each : columns_each + "new"})
-    #     data[columns_each] = ts_interpolate[columns_each]  # update the DataFrame with interpolated values
+        data[columns_each] = data[columns_each].interpolate()
+    # Export the data in .csv format to a new designated folder.
+    data.to_csv(LI_AWS + f"{location_name}_filled.csv", index=True)
 
-    # 여기에 export to csv 있어야함
-print(type(data))
+# ------------------------------------------------------------------------------------
 
+aws_distance = []
+for i in range(len(awsmap_csv["Location"])):
+    for j in range(len(awsmap_csv["Location"])):
+        if awsmap_csv["Location"][i] != awsmap_csv["Location"][j]:
+            distance = obs_distance(awsmap_csv, awsmap_csv["Location"][i], awsmap_csv, awsmap_csv["Location"][j])
+            aws_distance.append(distance)
 
-
-
-# selecting each files within the TRAIN_AWS folder
-
-for i in range(len(PM_paths)):
-    PM_paths[i] = unicodedata.normalize('NFC', PM_paths[i])
-
-
-# date_range = pd.date_range(start=AWS_paths)
-
-
+print(aws_distance)
 
 print("done")
 

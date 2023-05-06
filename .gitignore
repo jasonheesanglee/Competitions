@@ -357,3 +357,5 @@ pyrightconfig.json
 *.txt
 *.DS_Store
 dataset/.DS_Store
+dataset/Linear_Interpolate_Filled
+dataset/

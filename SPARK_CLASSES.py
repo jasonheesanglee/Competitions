@@ -128,5 +128,42 @@ for i in range(len(PM_paths)):
 merged_PM_df = pd.concat(conPM_List,axis=1)
 
 
+def missAllDrange(df):
+    nList = []
+    for k in range(3,8,1):
+        df_tmp = df.iloc[:,k]
+        nullIndex = df_tmp.index[df.isnull().any(axis=1)].tolist()
+        count = 0
+        for i in range(len(nullIndex)):
+            if i + 1 == len(nullIndex):
+                if count > 0:
+                    nList.append(f'{nullIndex[i]-count}:{k} ~ {nullIndex[i]}:{k}')
+                else:
+                     nList.append(f'{nullIndex[i]}:{k}')
+            elif nullIndex[i+1] - nullIndex[i] == 1:
+                count += 1
+            else:
+                if count==0:
+                    nList.append(f'{nullIndex[i]}:{k}')
+                else:
+                    nList.append(f'{nullIndex[i]-count}:{k} ~ {nullIndex[i]}:{k}')
+                    count = 0
+        return nList
+
+def obs_distance(df1, loc1, df2, loc2):
+    for n in range(len(df1["Location"])):
+        df1_loc = df1["Location"][i]
+        df2_loc = df2["Location"][j]
+        df1_lat = df1["Latitude"][i]
+        df2_lat = df2["Latitude"][j]
+        df1_lng = df1["Longitude"][i]
+        df2_lng = df2["Longitude"][j]
+
+        point_1 = (df1_lat, df1_lng)
+        point_2 = (df2_lat, df2_lng)
+        distance = hs.haversine(point_1, point_2)
+        where = f"{df1_loc} and {df2_loc}"
+        return (f"{where} = {distance}")
+
 
 print("done")
