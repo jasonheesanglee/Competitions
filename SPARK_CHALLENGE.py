@@ -82,6 +82,17 @@ def obs_distance(df1, df2):
     df = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
     return df
 
+def extract_data(file_location):
+    data = pd.read_csv(file_location)
+    return{
+        "Temperature":data["Temperature"].tolist(),
+        "Wind_Direction":data["Wind_Direction"].tolist(),
+        "Wind_Speed":data["Wind_Speed"].tolist(),
+        "Precipitation":data["Precipitation"].tolist(),
+        "Humidity":data["Humidity"].tolist()
+    }
+
+
 # ------------------------------------------------------------------------------------
 
 # reading All Test & Train csv files.
@@ -146,6 +157,9 @@ if not os.path.exists(dataset + "Distances"):
     os.mkdir(dataset + "Distances")
 if not os.path.exists(dataset + "Distances/QUARTILE"):
     os.mkdir(dataset + "Distances/QUARTILE")
+if not os.path.exists(dataset + "Differences"):
+    os.mkdir(dataset + "Differences")
+
 
 # ------------------------------------------------------------------------------------
 
@@ -363,8 +377,8 @@ for i in range(len(aws_distance)):
         continue
 
 
-df = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
-df.to_csv(QUARTILE + "aws_quartile.csv", index=True)
+df_AWS_Q = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
+df_AWS_Q.to_csv(QUARTILE + "aws_quartile.csv", index=False)
 
 rows = []
 for i in range(len(aws_pm_distance)):
@@ -374,8 +388,8 @@ for i in range(len(aws_pm_distance)):
         continue
 
 
-df = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
-df.to_csv(QUARTILE + "aws_pm_quartile.csv", index=True)
+df_AP_Q = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
+df_AP_Q.to_csv(QUARTILE + "aws_pm_quartile.csv", index=False)
 
 
 rows = []
@@ -386,18 +400,99 @@ for i in range(len(pm_distance)):
         continue
 
 
-df = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
-df.to_csv(QUARTILE + "pm_quartile.csv", index=True)
+df_PM_Q = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
+df_PM_Q.to_csv(QUARTILE + "pm_quartile.csv", index=False)
 
 # ------------------------------------------------------------------------------------
 
 # Finding Trends between 2 near locations for each Column
 
-aws_quartile = pd.read_csv(QUARTILE + "aws_quartile.csv", encoding="utf-8-sig")
+for index, row in df_AWS_Q.iterrows():
 
-rows = []
-for i in range(len(aws_quartile["Location A"])):
-    aws_quartile["Location A"][i]
+    location_a = row["Location A"]
+    location_b = row["Location B"]
+    distance = row["Distance"]
+
+    A_file_location = [f for f in all_file_locations["eng_train_aws"] if location_a in f][0]
+    B_file_location = [f for f in all_file_locations["eng_train_aws"] if location_b in f][0]
+    A_data = extract_data(A_file_location)
+    B_data = extract_data(B_file_location)
+
+    temp_diff = [(a - b) if not pd.isna(a) and not pd.isna(b) else np.nan for a, b in
+                 zip(A_data['Temperature'], B_data['Temperature'])]
+    temp_diff_df = pd.DataFrame({'Temperature Difference': temp_diff})
+    print(temp_diff_df)
+    wd_diff = [(a - b) if not pd.isna(a) and not pd.isna(b) else np.nan for a, b in
+               zip(A_data['Wind_Direction'], B_data['Wind_Direction'])]
+    wd_diff_df = pd.DataFrame({'WD Difference': wd_diff})
+    ws_diff = [(a - b) if not pd.isna(a) and not pd.isna(b) else np.nan for a, b in
+               zip(A_data['Wind_Speed'], B_data['Wind_Speed'])]
+    ws_diff_df = pd.DataFrame({'WS Difference': ws_diff})
+    pr_diff = [(a - b) if not pd.isna(a) and not pd.isna(b) else np.nan for a, b in
+               zip(A_data['Precipitation'], B_data['Precipitation'])]
+    pr_diff_df = pd.DataFrame({'Pr Difference': pr_diff})
+    hu_diff = [(a - b) if not pd.isna(a) and not pd.isna(b) else np.nan for a, b in
+               zip(A_data['Humidity'], B_data['Humidity'])]
+    hu_diff_df = pd.DataFrame({'HU Difference': hu_diff})
+
+    # df = pd.DataFrame(
+    #         'Location A'= [location_a],
+    #         'Location B'= [location_b],
+    #         'Distance' = [distance],
+    #         'Temperature Difference'= [temp_diff],
+    #         'Wind Direction Difference'= [wd_diff],
+    #         'Wind Speed Difference'= [ws_diff],
+    #         'Precipitation Difference'= [pr_diff],
+    #         'Humidity Difference'= [hu_diff]
+    #     )
+
+    df_AWS_Q = df_AWS_Q.assign(
+            Location_A = [location_a],
+            Location_B= [location_b],
+            Distance = [distance],
+            Temperature_Difference = [temp_diff_df],
+            Wind_Direction_Difference= [wd_diff_df],
+            Wind_Speed_Difference= [ws_diff_df],
+            Precipitation_Difference= [pr_diff_df],
+            Humidity_Difference = [hu_diff_df]
+        )
+
+    # # rows.append(df)
+    # df = pd.([df, temp_diff_df], axis=1)
+    # df = pd.concat([df, wd_diff_df], axis=1)
+    # df = pd.concat([df, ws_diff_df], axis=1)
+    # df = pd.concat([df, pr_diff_df], axis=1)
+    # df = pd.concat([df, hu_diff_df], axis=1)
+    # aws_quartile = pd.concat([df_AWS_Q, df], ignore_index=True)
+    df_AWS_Q.to_csv(dataset + "Differences/" + f"Differences_{location_a}_{location_b}.csv", index=False)
+
+
+'''
+# Concatenate the original DataFrame and the differences DataFrame
+df_combined = pd.concat([df_AWS_Q, pd.DataFrame(temp_diff, columns="Temperature"), pd.DataFrame(wd_diff, columns= "Wind_Direction"), ws_diff, pr_diff, hu_diff], axis=1)
+
+# Select only the relevant columns
+df_final = df_combined[['Location A', 'Location B', 'Distance', 'Temperature Difference',
+                        'Wind Direction Difference', 'Wind Speed Difference',
+                        'Precipitation Difference', 'Humidity Difference']]
+
+# Write the final DataFrame to a CSV file
+df_final.to_csv(dataset + "Differences.csv", index=False)
+
+    rows.append({
+        'Location A': location_a,
+        'Location B': location_b,
+        'Distance': distance,
+        'Temperature Difference': temp_diff,
+        'Wind Direction Difference': wd_diff,
+        'Wind Speed Difference': ws_diff,
+        'Precipitation Difference': pr_diff,
+        'Humidity Difference': hu_diff,
+    })
+
+df = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
+df.to_csv(dataset + "Differences.csv", index=True)
+'''
 
 print("done")
 

@@ -171,4 +171,17 @@ def obs_distance(df1, df2):
     return df.sort_values("Distance")
 
 
+# compare
+
+
+def extract_data(file_location):
+    data = pd.read_csv(file_location)
+    return{"Temperature":data["Temperature"].tolist(),
+            "Wind_Direction":data["Wind_Direction"].tolist(),
+            "Wind_Speed":data["Wind_Speed"].tolist(),
+            "Precipitation":data["Precipitation"].tolist(),
+            "Humidity":data["Humidity"].tolist()
+           }
+
+
 print("done")
