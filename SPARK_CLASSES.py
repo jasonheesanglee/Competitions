@@ -151,19 +151,21 @@ def missAllDrange(df):
         return nList
 
 def obs_distance(df1, loc1, df2, loc2):
-    for n in range(len(df1["Location"])):
-        df1_loc = df1["Location"][i]
-        df2_loc = df2["Location"][j]
-        df1_lat = df1["Latitude"][i]
-        df2_lat = df2["Latitude"][j]
-        df1_lng = df1["Longitude"][i]
-        df2_lng = df2["Longitude"][j]
+    for i in range(len(df1)):
+        for j in range(len(df2)):
+            if i != j:
+                df1_loc = df1["Location"][i]
+                df2_loc = df2["Location"][j]
+                df1_lat = df1["Latitude"][i]
+                df2_lat = df2["Latitude"][j]
+                df1_lng = df1["Longitude"][i]
+                df2_lng = df2["Longitude"][j]
 
-        point_1 = (df1_lat, df1_lng)
-        point_2 = (df2_lat, df2_lng)
-        distance = hs.haversine(point_1, point_2)
-        where = f"{df1_loc} and {df2_loc}"
-        return (f"{where} = {distance}")
+                point_1 = (df1_lat, df1_lng)
+                point_2 = (df2_lat, df2_lng)
+                distance = hs.haversine(point_1, point_2)
+                where = f"{df1_loc} and {df2_loc}"
+                return (f"{where} = {distance}")
 
 
 print("done")

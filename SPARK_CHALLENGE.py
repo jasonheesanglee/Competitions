@@ -21,6 +21,9 @@ import seaborn as sns
 import unicodedata
 import haversine as hs
 
+# ------------------------------------------------------------------------------------
+# Checking Fonts
+
 rc('font', family='AppleGothic')
 plt.rcParams['axes.unicode_minus'] = False
 
@@ -33,21 +36,144 @@ else:
 
 font_prop = fm.FontProperties(fname=font_path, size=12)
 
-# checking current directory
-print(os.getcwd())
+# ------------------------------------------------------------------------------------
+
+# Creating variables for data paths
 
 dataset = "./dataset/"
 META = dataset + "META/"
 TRAIN_AWS = dataset + "TRAIN_AWS/"
-TRAIN_PM = dataset + "TRAIN/"
+TRAIN_PM = dataset + "TRAIN/PM/"
 TEST_AWS = dataset + "TEST_AWS/"
 TEST_PM = dataset + "TEST_INPUT/"
+ENG_TRAIN_AWS = dataset + "ENG_TRAIN/AWS/"
+ENG_TRAIN_PM = dataset + "ENG_TRAIN/PM/"
+ENG_TEST_AWS = dataset + "ENG_TEST/AWS/"
+ENG_TEST_PM = dataset + "ENG_TEST/PM/"
 AWS_CITY_VARIABLE = dataset + "ALL_CITY_VARIABLE/AWS_TRAIN_VARIABLE/"
 PM_CITY_VARIABLE = dataset + "ALL_CITY_VARIABLE/PM_TRAIN_VARIABLE/"
 AWS_CITY_YEAR = dataset + "CITY_YEAR/AWS_TRAIN_CITY_YEAR/"
 PM_CITY_YEAR = dataset + "CITY_YEAR/PM_TRAIN_CITY_YEAR/"
-Linear_Interpolate = dataset + "Linear_Interpolate_Filled/"
-LI_AWS = Linear_Interpolate + "Linear_TRAIN_AWS/"
+LI_AWS = dataset + "Linear_Interpolate_Filled/Linear_TRAIN_AWS/"
+
+# ------------------------------------------------------------------------------------
+
+# Definition for getting distance between Point A, Point B
+
+def obs_distance(df1, df2):
+    for i in range(len(df1)):
+        for j in range(len(df2)):
+            if i != j:
+                df1_loc = df1["Location"][i]
+                df2_loc = df2["Location"][j]
+                df1_lat = df1["Latitude"][i]
+                df2_lat = df2["Latitude"][j]
+                df1_lng = df1["Longitude"][i]
+                df2_lng = df2["Longitude"][j]
+
+                point_1 = (df1_lat, df1_lng)
+                point_2 = (df2_lat, df2_lng)
+                distance = hs.haversine(point_1, point_2)
+                where = f"{df1_loc} and {df2_loc}"
+                return (f"{where} = {distance}")
+
+# ------------------------------------------------------------------------------------
+
+# reading All Test & Train csv files.
+
+file_locations = {
+    'meta': META,
+    'train_aws': TRAIN_AWS,
+    'train_pm': TRAIN_PM,
+    'test_aws': TEST_AWS,
+    'test_pm': TEST_PM,
+    "eng_train_aws" : ENG_TRAIN_AWS,
+    "eng_train_pm" : ENG_TRAIN_PM,
+    "eng_test_aws" : ENG_TEST_AWS,
+    "eng_test_pm" : ENG_TRAIN_AWS
+
+}
+
+all_file_locations = {}
+for key, value in file_locations.items():
+    all_file_locations[key] = glob.glob(value + "*.csv")
+
+'''
+type all_file_locations["key"] to call
+keys are "train_aws", "train_pm", "test_aws", "test_pm"
+'''
+
+# create new folders to store all csv files
+if not os.path.exists(dataset + "CITY_YEAR"):
+    os.mkdir(dataset + "CITY_YEAR")
+
+if not os.path.exists(AWS_CITY_YEAR):
+    os.mkdir(AWS_CITY_YEAR)
+
+if not os.path.exists(PM_CITY_YEAR):
+    os.mkdir(PM_CITY_YEAR)
+
+if not os.path.exists(dataset + "ALL_CITY_VARIABLE"):
+    os.mkdir(dataset + "ALL_CITY_VARIABLE")
+
+if not os.path.exists(AWS_CITY_VARIABLE):
+    os.mkdir(AWS_CITY_VARIABLE)
+
+if not os.path.exists(PM_CITY_VARIABLE):
+    os.mkdir(PM_CITY_VARIABLE)
+
+if not os.path.exists(dataset + "ENG_TRAIN"):
+    os.mkdir(dataset + "ENG_TRAIN")
+
+if not os.path.exists(ENG_TRAIN_AWS):
+    os.mkdir(ENG_TRAIN_AWS)
+
+if not os.path.exists(ENG_TRAIN_PM):
+    os.mkdir(ENG_TRAIN_PM)
+
+if not os.path.exists(dataset + "ENG_TEST"):
+    os.mkdir(dataset + "ENG_TEST")
+
+if not os.path.exists(ENG_TEST_AWS):
+    os.mkdir(ENG_TEST_AWS)
+
+if not os.path.exists(ENG_TEST_PM):
+    os.mkdir(ENG_TEST_PM)
+
+if not os.path.exists(dataset + "Linear_Interpolate_Filled"):
+    os.mkdir(dataset + "Linear_Interpolate_Filled")
+
+if not os.path.exists(LI_AWS):
+    os.mkdir(LI_AWS)
+
+# ------------------------------------------------------------------------------------
+
+
+# Converting all column names into English
+
+for files in all_file_locations['train_aws']:
+    file_name = files.split("/")[-1].split(".")[0]
+    train_aws_files = pd.read_csv(files, encoding="UTF-8")
+    renamed_train_aws = train_aws_files.rename(columns={"연도":"Year", "일시":"DateTime", "지점":"Observatory","기온(°C)":"Temperature", "풍향(deg)":"Wind_Direction", "풍속(m/s)":"Wind_Speed", "강수량(mm)":"Precipitation", "습도(%)":"Humidity"}, inplace=True)
+    renamed_train_aws.to_csv(ENG_TRAIN_AWS + , index=False)
+year_filename = AWS_CITY_YEAR + f"train_aws_{location}_{year}.csv"
+year_df.to_csv(year_filename, index=False)
+
+for files in all_file_locations['test_aws']:
+    test_aws_files = pd.read_csv(files, encoding="UTF-8")
+    test_aws_files.rename(columns={"연도":"Year", "일시":"DateTime", "지점":"Observatory","기온(°C)":"Temperature", "풍향(deg)":"Wind_Direction", "풍속(m/s)":"Wind_Speed", "강수량(mm)":"Precipitation", "습도(%)":"Humidity"}, inplace=True)
+    test_aws_files.to_csv(ENG_TEST_AWS + f"{test_aws_files}.csv", index=False)
+
+for files in all_file_locations['train_pm']:
+    train_pm_files = pd.read_csv(files, encoding="UTF-8")
+    train_pm_files.rename(columns={"연도":"Year", "일시":"DateTime", "측정소":"Observatory"}, inplace=True)
+    train_pm_files.to_csv(ENG_TRAIN_PM + f"{train_pm_files}.csv", index=False)
+
+
+for files in all_file_locations['test_pm']:
+    test_pm_files = pd.read_csv(files, encoding="UTF-8")
+    test_pm_files.rename(columns={"연도":"Year", "일시":"DateTime", "측정소":"Observatory"}, inplace=True)
+    test_pm_files.to_csv(ENG_TEST_PM, index=False)
 
 # ------------------------------------------------------------------------------------
 
@@ -62,22 +188,6 @@ pmmap_csv = pd.read_csv(META + "pmmap.csv", encoding="UTF-8")
 aws_loc = awsmap_csv["Location"]
 aws_lat = awsmap_csv["Latitude"]
 aws_lng = awsmap_csv["Longitude"]
-
-def obs_distance(df1, loc1, df2, loc2):
-    for n in range(len(df1["Location"])):
-        df1_loc = df1["Location"][i]
-        df2_loc = df2["Location"][j]
-        df1_lat = df1["Latitude"][i]
-        df2_lat = df2["Latitude"][j]
-        df1_lng = df1["Longitude"][i]
-        df2_lng = df2["Longitude"][j]
-
-        point_1 = (df1_lat, df1_lng)
-        point_2 = (df2_lat, df2_lng)
-        distance = hs.haversine(point_1, point_2)
-        where = f"{df1_loc} and {df2_loc}"
-        return (f"{where} = {distance}")
-
 
 pm_loc = pmmap_csv["Location"]
 pm_lat = pmmap_csv["Latitude"]
@@ -113,84 +223,12 @@ map_Kor.save("Climate_Map.html")
 # Map done #
 # ------------------------------------------------------------------------------------
 
-# reading All Test & Train csv files.
-
-file_locations = {
-    'meta' : META,
-    'train_aws': TRAIN_AWS,
-    'train_pm': TRAIN_PM,
-    'test_aws': TEST_AWS,
-    'test_pm': TEST_PM
-}
-
-all_file_locations = {}
-for key, value in file_locations.items():
-    all_file_locations[key] = glob.glob(value + "*.csv")
-'''
-type all_file_locations["key"] to call
-keys are "train_aws", "train_pm", "test_aws", "test_pm"
-'''
-
-# ------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------
-
-# Converting all column names into English
-
-for files in all_file_locations['train_aws']:
-    train_aws_files = pd.read_csv(files)
-    train_aws_files.rename(columns={"연도":"Year", "일시":"DateTime", "지점":"Observatory","기온(°C)":"Temperature", "풍향(deg)":"Wind_Direction", "풍속(m/s)":"Wind_Speed", "강수량(mm)":"Precipitation", "습도(%)":"Humidity"}, inplace=True)
-    train_aws_files.to_csv(files, index=False)
-
-
-for files in all_file_locations['test_aws']:
-    test_aws_files = pd.read_csv(files)
-    test_aws_files.rename(columns={"연도":"Year", "일시":"DateTime", "지점":"Observatory","기온(°C)":"Temperature", "풍향(deg)":"Wind_Direction", "풍속(m/s)":"Wind_Speed", "강수량(mm)":"Precipitation", "습도(%)":"Humidity"}, inplace=True)
-    test_aws_files.to_csv(files, index=False)
-
-for files in all_file_locations['train_pm']:
-    train_pm_files = pd.read_csv(files)
-    train_pm_files.rename(columns={"연도":"Year", "일시":"DateTime", "측정소":"Observatory"}, inplace=True)
-    train_pm_files.to_csv(files, index=False)
-
-
-for files in all_file_locations['test_pm']:
-    test_pm_files = pd.read_csv(files)
-    test_pm_files.rename(columns={"연도":"Year", "일시":"DateTime", "측정소":"Observatory"}, inplace=True)
-    test_pm_files.to_csv(files, index=False)
-
-# ------------------------------------------------------------------------------------
-
-# create new folders to store all csv files (per city, per year)
-if not os.path.exists(dataset + "CITY_YEAR"):
-    os.mkdir(dataset + "CITY_YEAR")
-
-if not os.path.exists(AWS_CITY_YEAR):
-    os.mkdir(AWS_CITY_YEAR)
-
-if not os.path.exists(PM_CITY_YEAR):
-    os.mkdir(PM_CITY_YEAR)
-
-if not os.path.exists(dataset + "ALL_CITY_VARIABLE"):
-    os.mkdir(dataset + "ALL_CITY_VARIABLE")
-
-if not os.path.exists(AWS_CITY_VARIABLE):
-    os.mkdir(AWS_CITY_VARIABLE)
-
-if not os.path.exists(PM_CITY_VARIABLE):
-    os.mkdir(PM_CITY_VARIABLE)
-
-if not os.path.exists(dataset + "Linear_Interpolate_Filled"):
-    os.mkdir(dataset + "Linear_Interpolate_Filled")
-
-if not os.path.exists(LI_AWS):
-    os.mkdir(LI_AWS)
-
 
 # ------------------------------------------------------------------------------------
 # separate csv file by city and years
 # selecting each files within the TRAIN_AWS folder
 
-for train_aws_file in all_file_locations['train_aws']:
+for train_aws_file in all_file_locations['eng_train_aws']:
     # read csv file
     df_aws = pd.read_csv(train_aws_file)
     # get location name from file name
@@ -201,7 +239,7 @@ for train_aws_file in all_file_locations['train_aws']:
         year_filename = AWS_CITY_YEAR + f"train_aws_{location}_{year}.csv"
         year_df.to_csv(year_filename, index=False)
 
-for train_pm_file in all_file_locations['train_pm']:
+for train_pm_file in all_file_locations['eng_train_pm']:
     # read csv file
     df_pm = pd.read_csv(train_pm_file)
     # get location name from file name
@@ -226,7 +264,7 @@ column_names = {
 
 for column_name, col_idx in column_names.items():
     temp_list = []
-    for train_aws_file in all_file_locations['train_aws']:
+    for train_aws_file in all_file_locations['eng_train_aws']:
         file_name = train_aws_file.split("/")[-1].split(".")[0]
         df_cols_only = pd.read_csv(train_aws_file, usecols=[0, 1, col_idx])
         temp_list.append((file_name, df_cols_only))
@@ -246,7 +284,7 @@ for column_name, col_idx in column_names.items():
 PM_TRAIN_total = pd.DataFrame()
 
 # selecting each files within the TRAIN_AWS folder
-for train_pm_file in all_file_locations['train_pm']:
+for train_pm_file in all_file_locations['eng_train_pm']:
     # read csv file
     df_train_pm = pd.read_csv(train_pm_file)
     # get location name from file name
@@ -292,15 +330,15 @@ plt.show()
 
 # Filling in Missing Values
 
-AWS_paths = all_file_locations["train_aws"]
+AWS_paths = all_file_locations["eng_train_aws"]
 
 # 1. Linear Interpolation
 
-for train_aws_file in all_file_locations['train_aws']:
+for train_aws_file in all_file_locations['eng_train_aws']:
     train_aws_file = unicodedata.normalize('NFC', train_aws_file)
 
 # Selecting each files within the TRAIN_AWS folder.
-for train_aws_file in all_file_locations['train_aws']:
+for train_aws_file in all_file_locations['eng_train_aws']:
     # Read each file.
     data = pd.read_csv(train_aws_file)
     # Added one more line of code to get the location name for future usage.
@@ -320,14 +358,20 @@ for train_aws_file in all_file_locations['train_aws']:
 
 # ------------------------------------------------------------------------------------
 
+# Getting distances between each observatory
+
 aws_distance = []
-for i in range(len(awsmap_csv["Location"])):
-    for j in range(len(awsmap_csv["Location"])):
-        if awsmap_csv["Location"][i] != awsmap_csv["Location"][j]:
-            distance = obs_distance(awsmap_csv, awsmap_csv["Location"][i], awsmap_csv, awsmap_csv["Location"][j])
-            aws_distance.append(distance)
+distance = obs_distance(awsmap_csv, awsmap_csv)
+aws_distance.append(distance)
 
 print(aws_distance)
+
+aws_pm_distance = []
+distance = obs_distance(awsmap_csv, pmmap_csv)
+aws_pm_distance.append(distance)
+
+print(aws_pm_distance)
+
 
 print("done")
 
