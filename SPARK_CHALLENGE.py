@@ -8,7 +8,6 @@
 # !pip install haversine
 
 import os
-import urllib.parse
 
 import numpy as np
 import pandas as pd
@@ -18,9 +17,6 @@ import matplotlib.font_manager as fm
 import scipy as sp
 from scipy.stats import pearsonr
 import folium
-from urllib import parse
-from urllib.request import Request, urlopen
-from bs4 import BeautifulSoup
 import glob
 import seaborn as sns
 import unicodedata
@@ -60,6 +56,7 @@ PM_CITY_VARIABLE = dataset + "ALL_CITY_VARIABLE/PM_TRAIN_VARIABLE/"
 AWS_CITY_YEAR = dataset + "CITY_YEAR/AWS_TRAIN_CITY_YEAR/"
 PM_CITY_YEAR = dataset + "CITY_YEAR/PM_TRAIN_CITY_YEAR/"
 LI_AWS = dataset + "Linear_Interpolate_Filled/Linear_TRAIN_AWS/"
+QUARTILE = dataset + "Distances/QUARTILE/"
 
 # ------------------------------------------------------------------------------------
 
@@ -67,7 +64,6 @@ LI_AWS = dataset + "Linear_Interpolate_Filled/Linear_TRAIN_AWS/"
 
 def obs_distance(df1, df2):
     rows = []
-    # df = pd.DataFrame(columns=["Location 1", "Location 2", "Distance"])
     for i in range(len(df1)):
         for j in range(len(df2)):
             if i != j:
@@ -81,8 +77,8 @@ def obs_distance(df1, df2):
                 point_1 = (df1_lat, df1_lng)
                 point_2 = (df2_lat, df2_lng)
                 distance = hs.haversine(point_1, point_2)
-                if 
-                rows.append({"Location 1": df1_loc, "Location 2":df2_loc, "Distance":distance})
+
+                rows.append({"Location A": df1_loc, "Location B": df2_loc, "Distance": distance})
     df = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
     return df
 
@@ -99,7 +95,8 @@ file_locations = {
     "eng_train_aws" : ENG_TRAIN_AWS,
     "eng_train_pm" : ENG_TRAIN_PM,
     "eng_test_aws" : ENG_TEST_AWS,
-    "eng_test_pm" : ENG_TRAIN_AWS
+    "eng_test_pm" : ENG_TRAIN_AWS,
+    "quartile" : QUARTILE
 
 }
 
@@ -119,54 +116,40 @@ keys are "train_aws", "train_pm", "test_aws", "test_pm"
 # create new folders to store all csv files
 if not os.path.exists(dataset + "CITY_YEAR"):
     os.mkdir(dataset + "CITY_YEAR")
-
 if not os.path.exists(AWS_CITY_YEAR):
     os.mkdir(AWS_CITY_YEAR)
-
 if not os.path.exists(PM_CITY_YEAR):
     os.mkdir(PM_CITY_YEAR)
-
 if not os.path.exists(dataset + "ALL_CITY_VARIABLE"):
     os.mkdir(dataset + "ALL_CITY_VARIABLE")
-
 if not os.path.exists(AWS_CITY_VARIABLE):
     os.mkdir(AWS_CITY_VARIABLE)
-
 if not os.path.exists(PM_CITY_VARIABLE):
     os.mkdir(PM_CITY_VARIABLE)
-
 if not os.path.exists(dataset + "ENG_TRAIN"):
     os.mkdir(dataset + "ENG_TRAIN")
-
 if not os.path.exists(ENG_TRAIN_AWS):
     os.mkdir(ENG_TRAIN_AWS)
-
 if not os.path.exists(ENG_TRAIN_PM):
     os.mkdir(ENG_TRAIN_PM)
-
 if not os.path.exists(dataset + "ENG_TEST"):
     os.mkdir(dataset + "ENG_TEST")
-
 if not os.path.exists(ENG_TEST_AWS):
     os.mkdir(ENG_TEST_AWS)
-
 if not os.path.exists(ENG_TEST_PM):
     os.mkdir(ENG_TEST_PM)
-
 if not os.path.exists(dataset + "Linear_Interpolate_Filled"):
     os.mkdir(dataset + "Linear_Interpolate_Filled")
-
 if not os.path.exists(LI_AWS):
     os.mkdir(LI_AWS)
-
 if not os.path.exists(dataset + "Distances"):
     os.mkdir(dataset + "Distances")
+if not os.path.exists(dataset + "Distances/QUARTILE"):
+    os.mkdir(dataset + "Distances/QUARTILE")
 
 # ------------------------------------------------------------------------------------
 
 # Converting all column names into English
-
-
 
 for files in all_file_locations['train_aws']:
     train_aws_files = pd.read_csv(files, encoding="utf-8-sig")
@@ -243,32 +226,10 @@ map_Kor.save("Climate_Map.html")
 # Map done #
 # ------------------------------------------------------------------------------------
 
-
-# ------------------------------------------------------------------------------------
 # separate csv file by city and years
 # selecting each files within the TRAIN_AWS folder
 
-for train_aws_file in all_file_locations['eng_train_aws']:
-    # read csv file
-    df_aws = pd.read_csv(train_aws_file)
-    # get location name from file name
-    location = os.path.splitext(os.path.basename(train_aws_file))[0]
-    # separate by year and save as separate csv files
-    for year in range(4):
-        year_df = df_aws[df_aws['Year'] == year]
-        year_filename = AWS_CITY_YEAR + f"train_aws_{location}_{year}.csv"
-        year_df.to_csv(year_filename, index=False)
 
-for train_pm_file in all_file_locations['eng_train_pm']:
-    # read csv file
-    df_pm = pd.read_csv(train_pm_file)
-    # get location name from file name
-    location = os.path.splitext(os.path.basename(train_pm_file))[0]
-    # separate by year and save as separate csv files
-    for year in range(4):
-        year_df = df_pm[df_pm['Year'] == year]
-        year_filename = PM_CITY_YEAR + f"train_pm_{location}_{year}.csv"
-        year_df.to_csv(year_filename, index=False)
 
 # ------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------
@@ -289,7 +250,6 @@ for column_name, col_idx in column_names.items():
         temp_list.append((file_name, df_cols_only))
 
     AWS_TRAIN_total = pd.concat([df_temp[1][column_name] for df_temp in temp_list], axis=1)
-    column_name = column_name.replace("/", "_")
     AWS_TRAIN_total.columns = [df_temp_new[0] for df_temp_new in temp_list]
 
     AWS_TRAIN_total.insert(loc=0, column='Year', value=temp_list[0][1]["Year"])
@@ -299,16 +259,11 @@ for column_name, col_idx in column_names.items():
 
 # ------------------------------------------------------------------------------------
 
-# created new dataframe to store same columns per city
 PM_TRAIN_total = pd.DataFrame()
 
-# selecting each files within the TRAIN_AWS folder
 for train_pm_file in all_file_locations['eng_train_pm']:
-    # read csv file
     df_train_pm = pd.read_csv(train_pm_file)
-    # get location name from file name
     column_name = train_pm_file.split("/")[-1].split(".")[0]
-    # separate PM column from each file and merge it into one file, save as csv file.
     column_data = df_train_pm.iloc[:, 3]
     column_data.name = column_name
     PM_TRAIN_total[column_name] = column_data
@@ -382,11 +337,67 @@ for train_aws_file in all_file_locations['eng_train_aws']:
 aws_distance = obs_distance(awsmap_csv, awsmap_csv)
 aws_distance.to_csv(dataset + "Distances/aws_distance.csv")
 
-
-
 aws_pm_distance = obs_distance(awsmap_csv, pmmap_csv)
 aws_pm_distance.to_csv(dataset + "Distances/aws_pm_distance.csv")
 
+pm_distance = obs_distance(pmmap_csv, pmmap_csv)
+pm_distance.to_csv(dataset + "Distances/pm_distance.csv")
+
+# ------------------------------------------------------------------------------------
+
+# Printing out descriptions for the data I have.
+
+print("aws_distance : \n", aws_distance.describe(), "\n")
+print("aws_pm_distance : \n", aws_pm_distance.describe(), "\n")
+print("pm_distance : \n", pm_distance.describe(), "\n")
+
+# ------------------------------------------------------------------------------------
+
+# Using 25% as a range.
+
+rows = []
+for i in range(len(aws_distance)):
+    if aws_distance["Distance"][i] <= np.percentile(aws_distance["Distance"], 25):
+        rows.append({"Location A":aws_distance["Location A"][i], "Location B":aws_distance["Location B"][i], "Distance":aws_distance["Distance"][i]})
+    else:
+        continue
+
+
+df = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
+df.to_csv(QUARTILE + "aws_quartile.csv", index=True)
+
+rows = []
+for i in range(len(aws_pm_distance)):
+    if aws_distance["Distance"][i] <= np.percentile(aws_distance["Distance"], 25):
+        rows.append({"Location A":aws_distance["Location A"][i], "Location B":aws_distance["Location B"][i], "Distance":aws_distance["Distance"][i]})
+    else:
+        continue
+
+
+df = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
+df.to_csv(QUARTILE + "aws_pm_quartile.csv", index=True)
+
+
+rows = []
+for i in range(len(pm_distance)):
+    if aws_distance["Distance"][i] <= np.percentile(aws_distance["Distance"], 25):
+        rows.append({"Location A":aws_distance["Location A"][i], "Location B":aws_distance["Location B"][i], "Distance":aws_distance["Distance"][i]})
+    else:
+        continue
+
+
+df = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
+df.to_csv(QUARTILE + "pm_quartile.csv", index=True)
+
+# ------------------------------------------------------------------------------------
+
+# Finding Trends between 2 near locations for each Column
+
+aws_quartile = pd.read_csv(QUARTILE + "aws_quartile.csv", encoding="utf-8-sig")
+
+rows = []
+for i in range(len(aws_quartile["Location A"])):
+    aws_quartile["Location A"][i]
 
 print("done")
 
