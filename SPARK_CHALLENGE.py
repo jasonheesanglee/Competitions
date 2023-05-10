@@ -14,6 +14,7 @@ import pandas as pd
 from matplotlib import rc
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
+from itertools import groupby
 import scipy as sp
 from scipy.stats import pearsonr
 import folium
@@ -57,6 +58,7 @@ AWS_CITY_YEAR = dataset + "CITY_YEAR/AWS_TRAIN_CITY_YEAR/"
 PM_CITY_YEAR = dataset + "CITY_YEAR/PM_TRAIN_CITY_YEAR/"
 LI_AWS = dataset + "Linear_Interpolate_Filled/Linear_TRAIN_AWS/"
 QUARTILE = dataset + "Distances/QUARTILE/"
+DIFFERENCES = dataset + "Differences/"
 
 # ------------------------------------------------------------------------------------
 
@@ -107,7 +109,8 @@ file_locations = {
     "eng_train_pm" : ENG_TRAIN_PM,
     "eng_test_aws" : ENG_TEST_AWS,
     "eng_test_pm" : ENG_TRAIN_AWS,
-    "quartile" : QUARTILE
+    "quartile" : QUARTILE,
+    "differences" : DIFFERENCES
 
 }
 
@@ -170,7 +173,6 @@ for files in all_file_locations['train_aws']:
     train_aws_files.rename(columns={"연도":"Year", "일시":"DateTime", "지점":"Observatory","기온(°C)":"Temperature", "풍향(deg)":"Wind_Direction", "풍속(m/s)":"Wind_Speed", "강수량(mm)":"Precipitation", "습도(%)":"Humidity"}, inplace=True)
     file_name = train_aws_files["Observatory"][0]
     train_aws_files.to_csv(ENG_TRAIN_AWS + f"{file_name}_eng.csv", index=False)
-
 
 
 for files in all_file_locations['test_aws']:
@@ -310,7 +312,7 @@ corr_matrix = rel_w_d.corr()
 # Plot a heatmap of the correlation matrix
 sns.heatmap(corr_matrix, annot=True, cmap="coolwarm")
 plt.title("Correlation Matrix of AWS Variables")
-plt.show()
+# plt.show()
 
 # ------------------------------------------------------------------------------------
 
@@ -351,7 +353,7 @@ for train_aws_file in all_file_locations['eng_train_aws']:
 aws_distance = obs_distance(awsmap_csv, awsmap_csv)
 aws_distance.to_csv(dataset + "Distances/aws_distance.csv")
 
-aws_pm_distance = obs_distance(awsmap_csv, pmmap_csv)
+aws_pm_distance = obs_distance(pmmap_csv, awsmap_csv)
 aws_pm_distance.to_csv(dataset + "Distances/aws_pm_distance.csv")
 
 pm_distance = obs_distance(pmmap_csv, pmmap_csv)
@@ -382,8 +384,8 @@ df_AWS_Q.to_csv(QUARTILE + "aws_quartile.csv", index=False)
 
 rows = []
 for i in range(len(aws_pm_distance)):
-    if aws_distance["Distance"][i] <= np.percentile(aws_distance["Distance"], 25):
-        rows.append({"Location A":aws_distance["Location A"][i], "Location B":aws_distance["Location B"][i], "Distance":aws_distance["Distance"][i]})
+    if aws_pm_distance["Distance"][i] <= np.percentile(aws_pm_distance["Distance"], 25):
+        rows.append({"Location A":aws_pm_distance["Location A"][i], "Location B":aws_pm_distance["Location B"][i], "Distance":aws_pm_distance["Distance"][i]})
     else:
         continue
 
@@ -394,8 +396,8 @@ df_AP_Q.to_csv(QUARTILE + "aws_pm_quartile.csv", index=False)
 
 rows = []
 for i in range(len(pm_distance)):
-    if aws_distance["Distance"][i] <= np.percentile(aws_distance["Distance"], 25):
-        rows.append({"Location A":aws_distance["Location A"][i], "Location B":aws_distance["Location B"][i], "Distance":aws_distance["Distance"][i]})
+    if pm_distance["Distance"][i] <= np.percentile(pm_distance["Distance"], 25):
+        rows.append({"Location A":pm_distance["Location A"][i], "Location B":pm_distance["Location B"][i], "Distance":pm_distance["Distance"][i]})
     else:
         continue
 
@@ -406,13 +408,12 @@ df_PM_Q.to_csv(QUARTILE + "pm_quartile.csv", index=False)
 # ------------------------------------------------------------------------------------
 
 # Finding Trends between 2 near locations for each Column
-
+df = pd.DataFrame()
 for index, row in df_AWS_Q.iterrows():
 
     location_a = row["Location A"]
     location_b = row["Location B"]
     distance = row["Distance"]
-
     A_file_location = [f for f in all_file_locations["eng_train_aws"] if location_a in f][0]
     B_file_location = [f for f in all_file_locations["eng_train_aws"] if location_b in f][0]
     A_data = extract_data(A_file_location)
@@ -421,7 +422,7 @@ for index, row in df_AWS_Q.iterrows():
     temp_diff = [(a - b) if not pd.isna(a) and not pd.isna(b) else np.nan for a, b in
                  zip(A_data['Temperature'], B_data['Temperature'])]
     temp_diff_df = pd.DataFrame({'Temperature Difference': temp_diff})
-    print(temp_diff_df)
+
     wd_diff = [(a - b) if not pd.isna(a) and not pd.isna(b) else np.nan for a, b in
                zip(A_data['Wind_Direction'], B_data['Wind_Direction'])]
     wd_diff_df = pd.DataFrame({'WD Difference': wd_diff})
@@ -435,37 +436,16 @@ for index, row in df_AWS_Q.iterrows():
                zip(A_data['Humidity'], B_data['Humidity'])]
     hu_diff_df = pd.DataFrame({'HU Difference': hu_diff})
 
-    # df = pd.DataFrame(
-    #         'Location A'= [location_a],
-    #         'Location B'= [location_b],
-    #         'Distance' = [distance],
-    #         'Temperature Difference'= [temp_diff],
-    #         'Wind Direction Difference'= [wd_diff],
-    #         'Wind Speed Difference'= [ws_diff],
-    #         'Precipitation Difference'= [pr_diff],
-    #         'Humidity Difference'= [hu_diff]
-    #     )
+    df["Location A"] = location_a
+    df["Location B"] = location_b
+    df["Distance"] = distance
+    df["temp_diff"] = temp_diff_df
+    df["wd_diff"] = wd_diff_df
+    df["ws_diff"] = ws_diff_df
+    df["pr_diff"] = pr_diff_df
+    df["hu_diff"] = hu_diff_df
 
-    df_AWS_Q = df_AWS_Q.assign(
-            Location_A = [location_a],
-            Location_B= [location_b],
-            Distance = [distance],
-            Temperature_Difference = [temp_diff_df],
-            Wind_Direction_Difference= [wd_diff_df],
-            Wind_Speed_Difference= [ws_diff_df],
-            Precipitation_Difference= [pr_diff_df],
-            Humidity_Difference = [hu_diff_df]
-        )
-
-    # # rows.append(df)
-    # df = pd.([df, temp_diff_df], axis=1)
-    # df = pd.concat([df, wd_diff_df], axis=1)
-    # df = pd.concat([df, ws_diff_df], axis=1)
-    # df = pd.concat([df, pr_diff_df], axis=1)
-    # df = pd.concat([df, hu_diff_df], axis=1)
-    # aws_quartile = pd.concat([df_AWS_Q, df], ignore_index=True)
-    df_AWS_Q.to_csv(dataset + "Differences/" + f"Differences_{location_a}_{location_b}.csv", index=False)
-
+    df.to_csv(DIFFERENCES + f"{location_a}-{location_b}.csv",index=False)
 
 '''
 # Concatenate the original DataFrame and the differences DataFrame
@@ -493,6 +473,50 @@ df_final.to_csv(dataset + "Differences.csv", index=False)
 df = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
 df.to_csv(dataset + "Differences.csv", index=True)
 '''
+
+
+filelist = all_file_locations["differences"]
+
+# file_groups = [list(i) for j, i in groupby(filelist, lambda filename: filename[:"-"])]
+# file_groups = [filename.split("/")[-1].split("-")[0] for filename in filelist]
+
+# file_groups = []
+# current_group = []
+# for filename in filelist:
+#     group_key = filename.split("/")[-1].split("-")[0]
+#     if not current_group or group_key == current_group[0].split("/")[-1].split("-")[0]:
+#         current_group.append(filename)
+#     else:
+#         file_groups.append(current_group)
+#         current_group = [filename]
+# if current_group:
+#     file_groups.append(current_group)
+
+
+file_groups = [list(i) for j, i in groupby(filelist, lambda filename: filename.split("/")[-1].split("-")[0])]
+
+print(file_groups)
+
+
+#
+#
+# temp_diff_plt = {}
+#
+# for files in all_file_locations["differences"]:
+#     filename = files.split("/")[-1].split(".")[0]
+#     LocationA = filename.split("-")[0]
+#     LocationB = filename.split("-")[1]
+#     df = pd.read_csv(files, encoding="utf-8-sig")
+#     temp_diffs = df["temp_diff"]
+#     if location_a not in temp_diff_plt:
+#         temp_diff_plt[location_a] = []
+#     temp_diff_plt[location_a].extend(temp_diffs)
+#
+#
+# for location_a, temp_diffs in temp_diff_plt.items():
+#     plt.plot(temp_diffs,label = location_a)
+#
+# plt.show()
 
 print("done")
 
