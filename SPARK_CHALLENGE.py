@@ -333,13 +333,6 @@ for train_aws_file in all_file_locations['eng_train_aws']:
     data = pd.read_csv(train_aws_file)
     # Added one more line of code to get the location name for future usage.
     location_name = train_aws_file.split("/")[-1].split(".")[0]
-    '''
-    Dead Codes (No Longer Used, Keeping it for future reference.)
-    # Splitting DateTime into separate columns of Date and Time.
-    data[["Date", "Time"]] = data["DateTime"].str.split(" ", expand=True)
-    # Convert time into Date_Range
-    date_range = list(data["Time"][0:])
-    '''
     # Interpolate the data and replace the old columns.
     for columns_each in data[data.columns[3:8]]:
         data[columns_each] = data[columns_each].interpolate()
@@ -447,75 +440,9 @@ for index, row in df_AWS_Q.iterrows():
 
     df.to_csv(DIFFERENCES + f"{location_a}-{location_b}.csv",index=False)
 
-'''
-# Concatenate the original DataFrame and the differences DataFrame
-df_combined = pd.concat([df_AWS_Q, pd.DataFrame(temp_diff, columns="Temperature"), pd.DataFrame(wd_diff, columns= "Wind_Direction"), ws_diff, pr_diff, hu_diff], axis=1)
-
-# Select only the relevant columns
-df_final = df_combined[['Location A', 'Location B', 'Distance', 'Temperature Difference',
-                        'Wind Direction Difference', 'Wind Speed Difference',
-                        'Precipitation Difference', 'Humidity Difference']]
-
-# Write the final DataFrame to a CSV file
-df_final.to_csv(dataset + "Differences.csv", index=False)
-
-    rows.append({
-        'Location A': location_a,
-        'Location B': location_b,
-        'Distance': distance,
-        'Temperature Difference': temp_diff,
-        'Wind Direction Difference': wd_diff,
-        'Wind Speed Difference': ws_diff,
-        'Precipitation Difference': pr_diff,
-        'Humidity Difference': hu_diff,
-    })
-
-df = pd.concat([pd.DataFrame(row, index=[0]) for row in rows], ignore_index=True)
-df.to_csv(dataset + "Differences.csv", index=True)
-'''
-
 
 filelist = all_file_locations["differences"]
 
-# file_groups = [list(i) for j, i in groupby(filelist, lambda filename: filename[:"-"])]
-# file_groups = [filename.split("/")[-1].split("-")[0] for filename in filelist]
-
-# file_groups = []
-# current_group = []
-# for filename in filelist:
-#     group_key = filename.split("/")[-1].split("-")[0]
-#     if not current_group or group_key == current_group[0].split("/")[-1].split("-")[0]:
-#         current_group.append(filename)
-#     else:
-#         file_groups.append(current_group)
-#         current_group = [filename]
-# if current_group:
-#     file_groups.append(current_group)
-
-
-file_groups = [list(i) for j, i in groupby(filelist, lambda filename: filename.split("/")[-1].split("-")[0])]
-
-print(file_groups)
-
-
-#
-#
-# temp_diff_plt = {}
-#
-# for files in all_file_locations["differences"]:
-#     filename = files.split("/")[-1].split(".")[0]
-#     LocationA = filename.split("-")[0]
-#     LocationB = filename.split("-")[1]
-#     df = pd.read_csv(files, encoding="utf-8-sig")
-#     temp_diffs = df["temp_diff"]
-#     if location_a not in temp_diff_plt:
-#         temp_diff_plt[location_a] = []
-#     temp_diff_plt[location_a].extend(temp_diffs)
-#
-#
-# for location_a, temp_diffs in temp_diff_plt.items():
-#     plt.plot(temp_diffs,label = location_a)
-#
 # plt.show()
 
 print("done")
