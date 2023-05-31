@@ -362,4 +362,6 @@ dataset/
 .csv
 .xlsx
 /dataset/
-.wav
+*.wav
+./DACON_Sound_Emotion/open/
+*.zip
