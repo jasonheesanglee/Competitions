@@ -4,15 +4,16 @@
 # !pip install pytorch_transformers
 # !pip install transformers
 
+import numpy as np
 import pandas as pd
 import re
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
-from pytorch_transformers import BertTokenizer, BertForSequenceClassification, BertConfig
-from torch.optim import Adam
-from torch.utils.data import Dataset, DataLoader
-from transformers import AutoTokenizer, AutoModel
+# from pytorch_transformers import BertTokenizer, BertForSequenceClassification, BertConfig
+# from torch.optim import Adam
+# from torch.utils.data import Dataset, DataLoader
+from transformers import AutoTokenizer, AutoModel, BertModel
 
 def text_processor(s):
     """
@@ -124,10 +125,68 @@ def bert_tokenizer(df, column_name):
         ei_list = []
         for j in range(1):
             encoded_input = tokenizer(i, padding='max_length', max_length=512, truncation=True, return_tensors='pt')
-            ei_list.append(encoded_input)
+            ei_list.append(encoded_input.items())
+        ei_total_list.append(ei_list)
+    df_1 = pd.DataFrame(ei_total_list, columns="tensors")
+    return df_1
+
+def auto_tokenizer(df, column_name):
+    '''
+    입력한 df의 문자 벡터를 수치화 합니다.
+
+    :param df:문자 벡터를 수치화하고 DataFrame
+    :return:
+    '''
+    bert_model = 'bert-base-uncased'
+    tokenizer = AutoTokenizer.from_pretrained(bert_model)
+    model = AutoModel.from_pretrained(bert_model)
+
+    ei_total_list = []
+    for i in tqdm(df[column_name]):
+        ei_list = []
+        for j in range(1):
+            encoded_input = tokenizer(i, padding='max_length', max_length=512, truncation=True, return_tensors='pt')
+            with torch.no_grad():
+                model_output = model(**encoded_input)
+            sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])
+            sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
+            ei_list.append(sentence_embeddings)
         ei_total_list.append(ei_list)
     df_1 = pd.DataFrame(ei_total_list)
     return df_1
+
+
+# def bert_embedding(df):
+#     model = BertModel.from_pretrained("bert-base-uncased", add_pooling_layer=False, output_hidden_states=True,
+#                                       output_attentions=True)
+#     output_total_list = []
+#     for index in tqdm(range(len(df))):
+#         input_dict = df.iloc[index, 0][0]
+#         output = model(**input_dict)
+#         output_total_list.append(output)
+#     output_df = pd.DataFrame(output_total_list)
+#
+#     return output_df
+
+
+def bert_embedding(df):
+    model = BertModel.from_pretrained("bert-base-uncased", add_pooling_layer=False, output_hidden_states=True,
+                                      output_attentions=True)
+    output_total_list = []
+    for index in tqdm(range(len(df))):
+        input_dict_items = df.iloc[index, 0]
+        input_dict = dict(input_dict_items)
+        input_ids = input_dict['input_ids']
+        attention_mask = input_dict['attention_mask']
+        token_type_ids = input_dict['token_type_ids']
+
+        output = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+        output_total_list.append(output)
+    # output_df = pd.DataFrame(output_total_list)
+
+    return output_total_list
+
+
 def tensor_2_2d(df, n):
     df_renamed = df.rename(columns={0: 'tbd', 1: 'hmm'})
     tensors = pd.DataFrame(df_renamed.groupby(by="tbd"))
@@ -203,7 +262,11 @@ class SimpleOps():
         df = self.drop(self.columns[start_number:(end_number + 1)], axis=1)
         return df
 
-    def law_train_clean(self, df):
+    def ocd(self, colnum1):
+        df = self.drop(columns=[colnum1])
+        return df
+
+    def law_train_clean_ccd(self, df):
         df = pd.concat([self.iloc[:, 0], df], axis=1)
         temp = SimpleOps.ccd(self, 3, 4)
         temp = SimpleOps.right_merger(temp, df, 0)
@@ -211,8 +274,23 @@ class SimpleOps():
         train_cleansed = SimpleOps.right_merger(temp, temptemp, 0)
         return train_cleansed
 
+    def law_train_clean1(self, df, colnum1):
+        df = pd.concat([self.iloc[:, 0], df], axis=1)
+        temp = SimpleOps.ocd(self, colnum1)
+        temp = SimpleOps.right_merger(temp, df, 0)
+        temptemp = SimpleOps.ocd(self, colnum1)
+        train_cleansed = SimpleOps.right_merger(temp, temptemp, 0)
+        return train_cleansed
 
+    def df_divider(self, column):
+        if len(self) % 2 == 0:
+            divided_df = np.array_split(self[column], 26)
 
+        else:
+            divided_df = np.array_split(self[column][:-1], 25)
+            divided_df.apend(self[column][-1:])
+
+        return divided_df[0], divided_df[1], divided_df[2], divided_df[3], divided_df[4], divided_df[5], divided_df[6], divided_df[7] , divided_df[8] , divided_df[9], divided_df[10], divided_df[11], divided_df[12], divided_df[13], divided_df[14], divided_df[15], divided_df[16], divided_df[17] , divided_df[18] , divided_df[19], divided_df[20], divided_df[21], divided_df[22], divided_df[23], divided_df[24], divided_df[25]
 
 
 print(
