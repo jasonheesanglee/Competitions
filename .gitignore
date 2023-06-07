@@ -365,3 +365,4 @@ dataset/
 *.wav
 ./DACON_Sound_Emotion/open/
 *.zip
+DACON_LAW/open/uncased_L-8_H-512_A-8/*
