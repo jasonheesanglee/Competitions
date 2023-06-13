@@ -3,6 +3,7 @@
 # !pip install tqdm
 # !pip install pytorch_transformers
 # !pip install transformers
+# !pip install catboost
 
 import numpy as np
 import pandas as pd
@@ -10,10 +11,15 @@ import re
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
-# from pytorch_transformers import BertTokenizer, BertForSequenceClassification, BertConfig
-# from torch.optim import Adam
-# from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer, AutoModel, BertModel
+from xgboost import XGBClassifier as xgb
+import lightgbm as lgb
+import catboost as cat
+import optuna
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+
+
 
 def text_processor(s):
     """
@@ -59,23 +65,30 @@ def text_processor(s):
 
     return s_list
 
-def law_preprocessor(df, column):
+def alpha_only_3_cols(df, column1, column2, column3):
     '''
-    입력한 df의 column에서
-    알파벳을 제외한 모든 숫자, 기호를 제거합니다.
+    입력한 df의 column 3개에서 알파벳을 제외한 모든 숫자, 기호를 제거합니다.
 
     :param df: 대상이 될 DataFrame
-    :param column: df에서 대상이 될 Column
+    :param column1: df에서 대상이 될 Column 1
+    :param column2: df에서 대상이 될 Column 2
+    :param column3: df에서 대상이 될 Column 3
     :return: 새로운 DataFrame안에 담긴 text_processor가 적용된 column
     '''
-    temp = []
+
+    temp1 = []
+    temp2 = []
+    temp3 = []
     for i in range(len(df)):
-        temp.append(text_processor(df[f'{column}'][i]))
+        temp1.append(text_processor(df[f'{column1}'][i]))
+        temp2.append(text_processor(df[f'{column2}'][i]))
+        temp3.append(text_processor(df[f'{column3}'][i]))
+    temp = pd.DataFrame({f"{column1}": temp1, f'{column2}': temp2, f'{column3}': temp3})
+    df[f"{column1}"] = temp[f"{column1}"]
+    df[f"{column2}"] = temp[f"{column2}"]
+    df[f"{column3}"] = temp[f"{column3}"]
 
-    temp_dict = {f"{column}": temp}
-
-    processed = pd.DataFrame(temp_dict)
-    return processed
+    return df
 
 def mean_pooling(model_output, attention_mask):
     '''
@@ -85,51 +98,6 @@ def mean_pooling(model_output, attention_mask):
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
-def tokenizer(df):
-    '''
-    입력한 df의 문자 벡터를 수치화 합니다.
-
-    :param df:문자 벡터를 수치화하고 DataFrame
-    :return:
-    '''
-
-    tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
-    model = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
-
-    combined_se_df = pd.DataFrame()
-    for fact in tqdm(df):
-        encoded_input = tokenizer(fact, padding=True, truncation=True, return_tensors='pt')
-        with torch.no_grad():
-            model_output = model(**encoded_input)
-        sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])
-        sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
-        se_df = pd.DataFrame(sentence_embeddings)
-        combined_se_df = pd.concat([combined_se_df, se_df])
-
-    return combined_se_df
-
-
-def bert_tokenizer(df, column_name):
-    '''
-    입력한 df의 문자 벡터를 수치화 합니다.
-
-    :param df:문자 벡터를 수치화하고 DataFrame
-    :return:
-    '''
-    bert_model = 'bert-base-uncased'
-    tokenizer = AutoTokenizer.from_pretrained(bert_model)
-
-
-    ei_total_list = []
-    for i in tqdm(df[column_name]):
-        ei_list = []
-        for j in range(1):
-            encoded_input = tokenizer(i, padding='max_length', max_length=512, truncation=True, return_tensors='pt')
-            ei_list.append(encoded_input.items())
-        ei_total_list.append(ei_list)
-    df_1 = pd.DataFrame(ei_total_list, columns="tensors")
-    return df_1
-
 def auto_tokenizer(df, column_name):
     '''
     입력한 df의 문자 벡터를 수치화 합니다.
@@ -137,7 +105,7 @@ def auto_tokenizer(df, column_name):
     :param df:문자 벡터를 수치화하고 DataFrame
     :return:
     '''
-    bert_model = 'bert-base-uncased'
+    bert_model = 'nlpaueb/bert-base-uncased-contracts'
     tokenizer = AutoTokenizer.from_pretrained(bert_model)
     model = AutoModel.from_pretrained(bert_model)
 
@@ -156,35 +124,26 @@ def auto_tokenizer(df, column_name):
     return df_1
 
 
-# def bert_embedding(df):
-#     model = BertModel.from_pretrained("bert-base-uncased", add_pooling_layer=False, output_hidden_states=True,
-#                                       output_attentions=True)
-#     output_total_list = []
-#     for index in tqdm(range(len(df))):
-#         input_dict = df.iloc[index, 0][0]
-#         output = model(**input_dict)
-#         output_total_list.append(output)
-#     output_df = pd.DataFrame(output_total_list)
-#
-#     return output_df
+def rename_tokenized(df_1, df_2, column_1, column_2, column_3, target_column):
+    df_1_df = pd.DataFrame()
+    df_2_df = pd.DataFrame()
+    df_list = [df_1, df_2]
+    column_list = [column_1, column_2, column_3]
 
+    for df_idx in range(len(df_list)):
+        for col_idx in range(len(column_list)):
+            df_berted = auto_tokenizer(df_list[df_idx], column_list[col_idx])
+            df_berted = df_berted.rename(columns={0: f'{column_list[col_idx]}_berted'})
+            if df_idx == 0:
+                df_1_df = pd.concat([df_1_df, df_berted], axis=1)
 
-def bert_embedding(df):
-    model = BertModel.from_pretrained("bert-base-uncased", add_pooling_layer=False, output_hidden_states=True,
-                                      output_attentions=True)
-    output_total_list = []
-    for index in tqdm(range(len(df))):
-        input_dict_items = df.iloc[index, 0]
-        input_dict = dict(input_dict_items)
-        input_ids = input_dict['input_ids']
-        attention_mask = input_dict['attention_mask']
-        token_type_ids = input_dict['token_type_ids']
+            elif df_idx == 1:
+                df_2_df = pd.concat([df_2_df, df_berted], axis=1)
 
-        output = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
-        output_total_list.append(output)
-    # output_df = pd.DataFrame(output_total_list)
-
-    return output_total_list
+    df_1_df = pd.concat([df_1_df, df_1[target_column]], axis=1)
+    df_1_df.to_csv('./embeddings/1_train_ready_to_ml.csv', index=False)
+    df_2_df.to_csv('./embeddings/2_test_ready_to_ml.csv', index=False)
+    return df_1_df, df_2_df
 
 
 def tensor_2_2d(df, n):
@@ -217,8 +176,50 @@ def tensor_2_2d(df, n):
     return final_df
 
 
+def tensor_separator(df, column_name):
+    to_replace = ["t e n s o r", "[", "]", "(", ")", " "]
+    full_tensor_list =[]
+    for tensor in tqdm(df[column_name]):
+        # tensor = tensor.astype(str) ## if tensor != str
+        tensor = " ".join(tensor)
+        list_per_row = []
+        for i in to_replace:
+            tensor = tensor.lower()
+            tensor = tensor.replace(i, "")
+        tensor_list = tensor.split(",")
+        list_per_row.extend(tensor_list)
+        full_tensor_list.append(list_per_row)
+    full_tensor_df = pd.DataFrame(full_tensor_list)
+
+    return full_tensor_df
+
+def X2_T2(df1, df2, column):
+    X_temp = pd.DataFrame()
+    temp_train = df1.drop(columns=column)
+    for i in temp_train:
+        to_be_X = pd.concat([X_temp, tensor_separator(temp_train, i)], axis=1)
+
+    to_be_X = (pd.concat([to_be_X, df1[column]], axis=1)).astype('float64')
+
+    X_test_temp = pd.DataFrame()
+    for i in df2:
+        to_be_test_X = (pd.concat([X_test_temp, tensor_separator(df2, i)], axis=1)).astype('float64')
+
+    return to_be_X, to_be_test_X
 
 
+def test_val_separator(df1, df2, test_size):
+    train_cols = df1.columns.values.tolist()
+    test_cols = df2.columns.values.tolist()
+    column_y = [i for i in train_cols if i not in test_cols]
+    column_X = [i for i in train_cols if i not in column_y]
+    X = df1[df1.columns[df1.columns.isin(column_X)]]
+    y = df1[df1.columns[df1.columns.isin(column_y)]]
+
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=test_size, random_state=42)
+    test_X = df2
+
+    return X_train, X_val, y_train, y_val, test_X
 
 class SimpleOps():
     '''
@@ -293,6 +294,7 @@ class SimpleOps():
         return divided_df[0], divided_df[1], divided_df[2], divided_df[3], divided_df[4], divided_df[5], divided_df[6], divided_df[7] , divided_df[8] , divided_df[9], divided_df[10], divided_df[11], divided_df[12], divided_df[13], divided_df[14], divided_df[15], divided_df[16], divided_df[17] , divided_df[18] , divided_df[19], divided_df[20], divided_df[21], divided_df[22], divided_df[23], divided_df[24], divided_df[25]
 
 
+
 print(
 " ___________________________\n"
 "|                           |\n"
@@ -301,5 +303,5 @@ print(
 "|==== DLC Well Imported ====|\n"
 "|===========================|\n"
 "|========= BYJASON =========|\n"
-"|___________________________|\n"
+"|________11th_Jun_23________|\n"
 )
