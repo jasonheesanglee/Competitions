@@ -268,48 +268,54 @@ def auto_tokenizer(df, column_name):
     df_berted = np.array(ei_total_list)
     return df_berted
 
-
-def rename_tokenized(df_1, df_2, column_1, column_2, column_3, target_column):
+def analyze_correlations(tokenized_data):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     device = torch.device(device)
+    bert_model = 'nlpaueb/bert-base-uncased-contracts'
+    tokenizer = AutoModelForTokenClassification.from_pretrained(bert_model)
+    model = AutoModelForTokenClassification.from_pretrained(bert_model)
+    model = model.to(device)
 
-    df_1_df = pd.DataFrame()
-    df_2_df = pd.DataFrame()
+    correlations = []
+    for tensor in tokenized_data:
+        with torch.no_grad():
+            outputs = model(tensor)
+            attention_weights = outputs.attention_weights[-1]
+
+        masked_attention_weights = attention_weights[0][tensor == tokenizer.mask_token_id]
+        correlations.append(masked_attention_weights.cpu().numpy())
+
+    return correlations
+
+def rename_tokenized(df_1, df_2, column_1, column_2, column_3):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(device)
+    df_1_df = torch.tensor([], device=device)
+    df_2_df = torch.tensor([], device=device)
     df_list = [df_1, df_2]
     column_list = [column_1, column_2, column_3]
-    count = 1
     for df_idx in range(len(df_list)):
         for col_idx in range(len(column_list)):
             df_berted = auto_tokenizer(df_list[df_idx], column_list[col_idx])
-            print('\nif statements start\n')
             if isinstance(df_berted, pd.DataFrame):
                 df_berted = df_berted.rename(columns={0: f'{column_list[col_idx]}_berted'})
             if df_idx == 0:
-                if isinstance(df_1_df, pd.DataFrame):
+                if isinstance(df_berted, pd.DataFrame):
                     df_1_df = torch.tensor(df_berted, device=device)
                 else:
-                    df_1_df = torch.cat([df_1_df, torch.tensor(df_berted, device=device)], dim=1)
+                    df_1_df = [df_1_df, torch.tensor(df_berted, device=device)]
             elif df_idx == 1:
                 if isinstance(df_2_df, pd.DataFrame):
                     df_2_df = torch.tensor(df_berted, device=device)
                 else:
-                    df_2_df = torch.cat([df_2_df, torch.tensor(df_berted, device=device)], dim=1)
-        print(f'If finished, Outer loop in rename_tokenize: {count}')
-        count += 1
+                    df_2_df = [df_2_df, torch.tensor(df_berted, device=device)]
 
-    df_1_df = df_1_df.cpu()
-    df_2_df = df_2_df.cpu()
-    df_1_df = pd.DataFrame({'temp' : df_1_df}, index=[0,len(df_1_df)])
+    train_correlations = analyze_correlations(df_1_df)
+    test_correlations = analyze_correlations(df_2_df)
 
-    df_1_df = new_tensor_separator(df_1_df, 'temp')
-    df_1_df = pd.concat([df_1_df, df_1[target_column]], axis=1)
+    return train_correlations, test_correlations
 
 
-
-    print('\nDONE : df_1_df = pd.concat([df_1_df, df_1[target_column]], axis=1)\n')
-    df_1_df = df_1_df.cpu()
-    df_2_df = df_2_df.cpu()
-    return df_1_df, df_2_df
 
 
 def tensor_2_2d(df, n):
