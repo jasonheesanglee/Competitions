@@ -10,7 +10,7 @@
 import numpy as np
 import pandas as pd
 import re
-
+from datetime import date
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -23,49 +23,49 @@ from sklearn.metrics import accuracy_score, classification_report
 
 
 
-def text_processor(s):
-    """
-    문장을 담고있는 variable을 넣어주면
-    알파벳을 제외한 문장의 모든 기호, 숫자를 제거합니다.
-
-    :param s: 문장을 담고있는 variable
-    :return: 새로운 DataFrame안에 담긴 text_processor가 적용된 column
-    """
-
-    pattern = r'\([^)]*\)'  # ()
-    s = re.sub(pattern=pattern, repl='', string=s)
-    pattern = r'\[[^)]*\]'  # []
-    s = re.sub(pattern=pattern, repl='', string=s)
-    pattern = r'\<[^)]*\>'  # <>
-    s = re.sub(pattern=pattern, repl='', string=s)
-    pattern = r'\{[^)]*\}'  # {}
-    s = re.sub(pattern=pattern, repl='', string=s)
-
-
-    pattern = r'[^a-zA-Z]'
-    s = re.sub(pattern=pattern, repl=' ', string=s)
-
-    months = ['on january', 'on february', 'on march', 'on april', 'on may', 'on june', 'on july', 'on august', 'on september', 'on october', 'on november', 'on december', 'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
-    for month in months:
-        s = s.lower()
-        s = s.replace(month, '')
-
-
-    units = ['mm', 'cm', 'km', 'ml', 'kg', 'g', 'th', 'st', 'rd', 'nd']
-    for unit in units:
-        s = s.lower()
-        s = s.replace(unit, '')
-
-    s_split = s.split()
-
-    s_list = []
-    for word in s_split:
-        if len(word) != 1:
-            s_list.append(word)
-
-    s_list = " ".join(s_list)
-
-    return s_list
+# def text_processor(s):
+#     """
+#     문장을 담고있는 variable을 넣어주면
+#     알파벳을 제외한 문장의 모든 기호, 숫자를 제거합니다.
+#
+#     :param s: 문장을 담고있는 variable
+#     :return: 새로운 DataFrame안에 담긴 text_processor가 적용된 column
+#     """
+#
+#     pattern = r'\([^)]*\)'  # ()
+#     s = re.sub(pattern=pattern, repl='', string=s)
+#     pattern = r'\[[^)]*\]'  # []
+#     s = re.sub(pattern=pattern, repl='', string=s)
+#     pattern = r'\<[^)]*\>'  # <>
+#     s = re.sub(pattern=pattern, repl='', string=s)
+#     pattern = r'\{[^)]*\}'  # {}
+#     s = re.sub(pattern=pattern, repl='', string=s)
+#
+#
+#     pattern = r'[^a-zA-Z]'
+#     s = re.sub(pattern=pattern, repl=' ', string=s)
+#
+#     months = ['on january', 'on february', 'on march', 'on april', 'on may', 'on june', 'on july', 'on august', 'on september', 'on october', 'on november', 'on december', 'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+#     for month in months:
+#         s = s.lower()
+#         s = s.replace(month, '')
+#
+#
+#     units = ['mm', 'cm', 'km', 'ml', 'kg', 'g', 'th', 'st', 'rd', 'nd']
+#     for unit in units:
+#         s = s.lower()
+#         s = s.replace(unit, '')
+#
+#     s_split = s.split()
+#
+#     s_list = []
+#     for word in s_split:
+#         if len(word) != 1:
+#             s_list.append(word)
+#
+#     s_list = " ".join(s_list)
+#
+#     return s_list
 
 def text_processor_2(s):
     """
@@ -104,30 +104,30 @@ def text_processor_2(s):
 
     return s_list
 
-def alpha_only_3_cols(df, column1, column2, column3):
-    '''
-    입력한 df의 column 3개에서 알파벳을 제외한 모든 숫자, 기호를 제거합니다.
-
-    :param df: 대상이 될 DataFrame
-    :param column1: df에서 대상이 될 Column 1
-    :param column2: df에서 대상이 될 Column 2
-    :param column3: df에서 대상이 될 Column 3
-    :return: 새로운 DataFrame안에 담긴 text_processor가 적용된 column
-    '''
-
-    temp1 = []
-    temp2 = []
-    temp3 = []
-    for i in range(len(df)):
-        temp1.append(text_processor(df[f'{column1}'][i]))
-        temp2.append(text_processor(df[f'{column2}'][i]))
-        temp3.append(text_processor(df[f'{column3}'][i]))
-    temp = pd.DataFrame({f"{column1}": temp1, f'{column2}': temp2, f'{column3}': temp3})
-    df[f"{column1}"] = temp[f"{column1}"]
-    df[f"{column2}"] = temp[f"{column2}"]
-    df[f"{column3}"] = temp[f"{column3}"]
-
-    return df
+# def alpha_only_3_cols(df, column1, column2, column3):
+#     '''
+#     입력한 df의 column 3개에서 알파벳을 제외한 모든 숫자, 기호를 제거합니다.
+#
+#     :param df: 대상이 될 DataFrame
+#     :param column1: df에서 대상이 될 Column 1
+#     :param column2: df에서 대상이 될 Column 2
+#     :param column3: df에서 대상이 될 Column 3
+#     :return: 새로운 DataFrame안에 담긴 text_processor가 적용된 column
+#     '''
+#
+#     temp1 = []
+#     temp2 = []
+#     temp3 = []
+#     for i in range(len(df)):
+#         temp1.append(text_processor(df[f'{column1}'][i]))
+#         temp2.append(text_processor(df[f'{column2}'][i]))
+#         temp3.append(text_processor(df[f'{column3}'][i]))
+#     temp = pd.DataFrame({f"{column1}": temp1, f'{column2}': temp2, f'{column3}': temp3})
+#     df[f"{column1}"] = temp[f"{column1}"]
+#     df[f"{column2}"] = temp[f"{column2}"]
+#     df[f"{column3}"] = temp[f"{column3}"]
+#
+#     return df
 
 def alpha_numeric_3_cols(df, column1, column2, column3):
     '''
@@ -171,12 +171,6 @@ def mean_pooling(model_output, attention_mask):
 
 
 def auto_tokenizer(df, column_name):
-    '''
-    입력한 df의 문자 벡터를 수치화 합니다.
-
-    :param df:문자 벡터를 수치화하고 DataFrame
-    :return:
-    '''
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     bert_model = 'nlpaueb/bert-base-uncased-contracts'
     tokenizer = AutoTokenizer.from_pretrained(bert_model)
@@ -185,6 +179,7 @@ def auto_tokenizer(df, column_name):
     nlp = pipeline('ner', model=model, tokenizer=tokenizer, device=0)
 
     ei_total_list = []
+    encoded_input_list = []
     for text in tqdm(df[column_name]):
         text = text.lower()
         entities = nlp(text)
@@ -211,6 +206,7 @@ def auto_tokenizer(df, column_name):
                         party_names['party']['first_name'] = entity['first_name']
                     if 'family_name' in entity:
                         party_names[party]['family_name'] = entity['family_name']
+
         list_of_states = [
             'wyoming', 'wisconsin', 'west virginia', 'washington', 'virginia',
             'vermont', 'utah', 'texas', 'tennessee', 'south dakota',
@@ -255,17 +251,18 @@ def auto_tokenizer(df, column_name):
 
         encoded_input = tokenizer(masked_text, padding='max_length', max_length=512, truncation=True, return_tensors='pt')
         encoded_input = {key: value.to(device) for key, value in encoded_input.items()}
-        # encoded_input['input_ids'] = encoded_input['input_ids'].to('cpu')
-        # encoded_input['attention_mask'] = encoded_input['attention_mask'].to('cpu')
+        encoded_input_list.append(encoded_input)
 
-        with torch.no_grad():
+        for encoded_input in encoded_input_list:
+            with torch.no_grad():
+                model_output = model(**encoded_input)
 
-            model_output = model(**encoded_input)
+            sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])
+            sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
+            ei_total_list.append(sentence_embeddings.squeeze().cpu().numpy())
 
-        sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])
-        sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
-        ei_total_list.append(sentence_embeddings.squeeze().cpu().numpy())
     df_berted = np.array(ei_total_list)
+
     return df_berted
 
 def analyze_correlations(tokenized_data):
@@ -276,46 +273,70 @@ def analyze_correlations(tokenized_data):
     model = AutoModelForTokenClassification.from_pretrained(bert_model)
     model = model.to(device)
 
-    correlations = []
-    for tensor in tokenized_data:
-        with torch.no_grad():
-            outputs = model(tensor)
-            attention_weights = outputs.attention_weights[-1]
+    tensor_data = torch.cat(tokenized_data, dim=0)  # Concatenate the list of tensors into a single tensor
+    with torch.no_grad():
+        outputs = model(tensor_data.to(device))
+        attention_weights = outputs.attention_weights[-1]
 
-        masked_attention_weights = attention_weights[0][tensor == tokenizer.mask_token_id]
+    correlations = []
+    for i, tensor in enumerate(tokenized_data):
+        masked_attention_weights = attention_weights[i][tensor == tokenizer.mask_token_id]
         correlations.append(masked_attention_weights.cpu().numpy())
 
     return correlations
 
 def rename_tokenized(df_1, df_2, column_1, column_2, column_3):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    device = torch.device(device)
-    df_1_df = torch.tensor([], device=device)
-    df_2_df = torch.tensor([], device=device)
+
+    df_1_list = []
+    df_2_list = []
     df_list = [df_1, df_2]
     column_list = [column_1, column_2, column_3]
-    for df_idx in range(len(df_list)):
-        for col_idx in range(len(column_list)):
-            df_berted = auto_tokenizer(df_list[df_idx], column_list[col_idx])
-            if isinstance(df_berted, pd.DataFrame):
-                df_berted = df_berted.rename(columns={0: f'{column_list[col_idx]}_berted'})
-            if df_idx == 0:
-                if isinstance(df_berted, pd.DataFrame):
-                    df_1_df = torch.tensor(df_berted, device=device)
-                else:
-                    df_1_df = [df_1_df, torch.tensor(df_berted, device=device)]
-            elif df_idx == 1:
-                if isinstance(df_2_df, pd.DataFrame):
-                    df_2_df = torch.tensor(df_berted, device=device)
-                else:
-                    df_2_df = [df_2_df, torch.tensor(df_berted, device=device)]
 
-    train_correlations = analyze_correlations(df_1_df)
-    test_correlations = analyze_correlations(df_2_df)
+    for df in df_list:
+        for col in column_list:
+            df_berted = auto_tokenizer(df, col)
 
-    return train_correlations, test_correlations
+            if isinstance(df_berted, np.ndarray):
+                column_names = [f'{col}_berted_{i}' for i in range(df_berted.shape[1])]
+                df_berted = pd.DataFrame(df_berted, columns=column_names)
+
+            tokenized_data = []
+            for _, row in df_berted.iterrows():
+                tensor = torch.tensor(row.values, device=device)
+                tokenized_data.append(tensor.tolist())
+
+            if df is df_1:
+                df_1_list.extend([tokenized_data])
+            elif df is df_2:
+                df_2_list.extend([tokenized_data])
+
+    df_1_df = pd.DataFrame(df_1_list, index=column_list)
+    df_2_df = pd.DataFrame(df_2_list, index=column_list)
+
+    df_1_df = df_1_df.T
+    df_2_df = df_2_df.T
+
+    return df_1_df, df_2_df
 
 
+def token_to_df(df):
+    outer_temp_df = pd.DataFrame()
+    count = 0
+    for column in df:
+        inner_temp_df = pd.DataFrame()
+        temp_list = []
+        for value in tqdm(df[column]):
+            value = value.replace('[', '').replace(']', '')
+            value = value.split(',')
+            temp_list.append(value)
+        temp_df = pd.DataFrame(temp_list)
+        inner_temp_df = pd.concat([inner_temp_df, temp_df], axis=1)
+        inner_temp_df_col = [f'{df.columns[count]}_1', f'{df.columns[count]}_2']
+        inner_temp_df.set_axis(inner_temp_df_col, axis=1, inplace=True)
+        count += 1
+        outer_temp_df = pd.concat([outer_temp_df, inner_temp_df], axis=1)
+    return outer_temp_df
 
 
 def tensor_2_2d(df, n):
@@ -453,6 +474,14 @@ class SimpleOps():
         return df
 
     def ocd(self, colnum1):
+        '''
+        One_Column_Dropper
+        한 개의 column을 삭제합니다.
+        위에꺼 만들고 안만들면 섭섭해서 그냥 만들었습니다.
+
+        :param colnum1: Column number you want to drop
+        :return: df with dropped column
+        '''
         df = self.drop(columns=[colnum1])
         return df
 
@@ -482,6 +511,19 @@ class SimpleOps():
 
         return divided_df[0], divided_df[1], divided_df[2], divided_df[3], divided_df[4], divided_df[5], divided_df[6], divided_df[7] , divided_df[8] , divided_df[9], divided_df[10], divided_df[11], divided_df[12], divided_df[13], divided_df[14], divided_df[15], divided_df[16], divided_df[17] , divided_df[18] , divided_df[19], divided_df[20], divided_df[21], divided_df[22], divided_df[23], divided_df[24], divided_df[25]
 
+today = date.today()
+date = today.strftime("%d")
+month = today.strftime('%b')
+year = today.strftime('%Y')
+
+if date in [1, 21, 31]:
+    suffix = 'st'
+elif date in [2, 22]:
+    suffix = 'nd'
+elif date in [3, 23]:
+    suffix = 'rd'
+else:
+    suffix = 'th'
 
 
 print(
@@ -492,5 +534,5 @@ print(
 "|==== DLC Well Imported ====|\n"
 "|===========================|\n"
 "|========= BYJASON =========|\n"
-"|________11th_Jun_23________|\n"
+f"|________{date}{suffix}_{month}_{year}________|\n"
 )
