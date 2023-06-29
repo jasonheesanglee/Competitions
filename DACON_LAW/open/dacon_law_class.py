@@ -104,6 +104,25 @@ def text_processor_2(s):
 
     return s_list
 
+
+def law_preprocessor(df, column):
+    '''
+    입력한 df의 column에서
+    알파벳을 제외한 모든 숫자, 기호를 제거합니다.
+
+    :param df: 대상이 될 DataFrame
+    :param column: df에서 대상이 될 Column
+    :return: 새로운 DataFrame안에 담긴 text_processor가 적용된 column
+    '''
+    temp = []
+    for i in range(len(df)):
+        temp.append(text_processor_2(df[f'{column}'][i]))
+
+    temp_dict = {f"{column}": temp}
+
+    processed = pd.DataFrame(temp_dict)
+    return processed
+
 # def alpha_only_3_cols(df, column1, column2, column3):
 #     '''
 #     입력한 df의 column 3개에서 알파벳을 제외한 모든 숫자, 기호를 제거합니다.
@@ -534,5 +553,5 @@ print(
 "|==== DLC Well Imported ====|\n"
 "|===========================|\n"
 "|========= BYJASON =========|\n"
-f"|________{date}{suffix}_{month}_{year}________|\n"
+f"|_______{date}{suffix}_{month}_{year}_______|\n"
 )
